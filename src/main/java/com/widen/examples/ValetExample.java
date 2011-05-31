@@ -1,4 +1,4 @@
-package com.widen.valet.examples;
+package com.widen.examples;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 import static java.util.TimeZone.getTimeZone;
 
 /**
- * Primary interface to interact with Route53.  See {@link com.widen.valet.examples.ValetExample} for usage example.
+ * Primary interface to interact with Route53.  See {@link com.widen.examples.ValetExample} for usage example.
  */
 public class Route53Driver
 {

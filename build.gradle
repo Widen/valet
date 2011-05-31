@@ -56,6 +56,21 @@ artifacts {
 	archives sourcesJar
 }
 
+task checkAwsKeys(description: 'Verify AWS keys are set.') << {
+	if (!hasProperty('aws-access-key') || !hasProperty('aws-secret-key'))
+	{
+		throw new InvalidUserDataException('You must run this task with the command line options -Paws-access-key=AMZ_ACCESS_KEY and -Paws-secret-key=AMZ_SECRET_KEY')
+	}
+}
+
+task zoneSummary(descrption: 'Print a summary of all hosted zones for the given AWS account', dependsOn: [ checkAwsKeys, classes, testClasses ]) << {
+	javaexec { spec ->
+		main = 'com.widen.examples.ZoneSummary'
+		args = [ getProperty('aws-access-key'), getProperty('aws-secret-key') ]
+		classpath = sourceSets.test.runtimeClasspath
+	}
+}
+
 eclipseClasspath {
   containers = [ 'org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6' ]
 }

@@ -1,28 +1,39 @@
 package com.widen.valet;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-import java.util.Collections;
-import java.util.List;
-
 public class ZoneResource
 {
-	public final String name;
+	private final String name;
 
-	public final RecordType recordType;
+	private final RecordType recordType;
 
-	public final int ttl;
+	private final int ttl;
 
-	public final List<String> resourceRecords;
+	private final String setIdentifier;
+
+	private final int weight;
+
+	private final List<String> resourceRecords;
 
 	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords)
+	{
+		this(name, recordType, ttl, resourceRecords, null, 0);
+	}
+
+	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords, String setIdentifier, int weight)
 	{
 		this.name = name;
 		this.recordType = recordType;
 		this.ttl = ttl;
 		this.resourceRecords = Collections.unmodifiableList(resourceRecords);
+		this.setIdentifier = setIdentifier;
+		this.weight = weight;
 	}
 
 	public String getFirstResource()
@@ -57,5 +68,35 @@ public class ZoneResource
 	public int hashCode()
 	{
 		return new HashCodeBuilder().append(name).append(recordType).append(ttl).append(resourceRecords).toHashCode();
+	}
+
+	public String getName()
+	{
+		return name;
+	}
+
+	public RecordType getRecordType()
+	{
+		return recordType;
+	}
+
+	public int getTtl()
+	{
+		return ttl;
+	}
+
+	public List<String> getResourceRecords()
+	{
+		return resourceRecords;
+	}
+
+	public String getSetIdentifier()
+	{
+		return setIdentifier;
+	}
+
+	public int getWeight()
+	{
+		return weight;
 	}
 }

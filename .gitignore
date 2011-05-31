@@ -5,6 +5,8 @@
 build/
 gradle.properties
 out/
+private.txt
 src/main/java/com/widen/valet/importer/importdns.properties
 src/main/java/com/widen/valet/importer/zones/*
+src/test/resources/com/widen/valet/IntegrationTest.properties
 valet.iml

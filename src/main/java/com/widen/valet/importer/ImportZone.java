@@ -14,7 +14,20 @@
 
 package com.widen.valet.importer;
 
-import com.widen.valet.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
+
+import com.widen.valet.RecordType;
+import com.widen.valet.Route53Driver;
+import com.widen.valet.Zone;
+import com.widen.valet.ZoneChangeStatus;
+import com.widen.valet.ZoneUpdateAction;
 import com.widen.valet.util.ListUtil;
 import com.widen.valet.util.NameQueryByRoute53APIService;
 import com.widen.valet.util.NameQueryService;
@@ -23,11 +36,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
 
 /**
  * Smart sync zone from file.
@@ -165,7 +173,7 @@ public class ImportZone
 			{
 				log.debug("processing line: {}", l);
 
-				List<ZoneUpdateAction> actionForRecord = parseRecord(l, zone.name, actions);
+				List<ZoneUpdateAction> actionForRecord = parseRecord(l, zone.getName(), actions);
 
 				actions.addAll(actionForRecord);
 			}
@@ -225,7 +233,7 @@ public class ImportZone
 
 		if (itemToMerge >= 0)
 		{
-			List<String> resources = existing.get(itemToMerge).resourceRecord;
+			List<String> resources = existing.get(itemToMerge).getResourceRecords();
 
 			existing.remove(itemToMerge);
 

@@ -1,9 +1,9 @@
 package com.widen.valet.internal;
 
+import java.io.IOException;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-
-import java.io.IOException;
 
 /**
  * Returns static values for Route53 requests.
@@ -20,6 +20,12 @@ public class Route53PilotMock implements Route53Pilot
 		{
 			throw new RuntimeException(e);
 		}
+	}
+
+	@Override
+	public String executeHostedZoneDelete(String zone)
+	{
+		return "<delete xml>";
 	}
 
 	public String executeChangeInfoGet(String changeId)

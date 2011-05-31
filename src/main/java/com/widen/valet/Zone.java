@@ -1,24 +1,24 @@
 package com.widen.valet;
 
-import org.apache.commons.lang.builder.CompareToBuilder;
-import org.apache.commons.lang.builder.ToStringBuilder;
-
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.commons.lang.builder.CompareToBuilder;
+import org.apache.commons.lang.builder.ToStringBuilder;
 
 public class Zone implements Comparable<Zone>
 {
 	public static final Zone NON_EXISTENT_ZONE = new Zone("Z_NON_EXISTENT", "non-existent-zone.com.", "", "", Collections.<String>emptyList());
 
-	public final String zoneId;
+	private final String zoneId;
 
-	public final String name;
+	private final String name;
 
-	public final String callerReference;
+	private final String callerReference;
 
-	public final String comment;
+	private final String comment;
 
-	public final List<String> nameServers;
+	private final List<String> nameServers;
 
 	Zone(String zoneId, String name, String callerReference, String comment, List<String> nameServers)
 	{
@@ -50,4 +50,30 @@ public class Zone implements Comparable<Zone>
 	{
 		return new CompareToBuilder().append(name, rhs.name).append(zoneId, rhs.zoneId).toComparison();
 	}
+
+	public String getZoneId()
+	{
+		return zoneId;
+	}
+
+	public String getName()
+	{
+		return name;
+	}
+
+	public String getCallerReference()
+	{
+		return callerReference;
+	}
+
+	public String getComment()
+	{
+		return comment;
+	}
+
+	public List<String> getNameServers()
+	{
+		return nameServers;
+	}
+
 }

@@ -4,7 +4,7 @@ apply plugin: 'idea'
 apply plugin: 'maven'
 
 group = 'widen'
-version = '0.1'
+version = '0.2'
 
 sourceCompatibility = 1.5
 targetCompatibility = 1.5
@@ -32,7 +32,7 @@ dependencies {
 
 	compile group: 'com.mycila.xmltool', name: 'xmltool', version: '3.2'
 	
-	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.1'
+	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.1.1'
 
 	compile group: 'commons-lang', name: 'commons-lang', version: '2.5'
 
@@ -54,6 +54,21 @@ task sourcesJar(type: Jar) {
 
 artifacts {
 	archives sourcesJar
+}
+
+task checkAwsKeys(description: 'Verify AWS keys are set.') << {
+	if (!hasProperty('aws-access-key') || !hasProperty('aws-secret-key'))
+	{
+		throw new InvalidUserDataException('You must run this task with the command line options -Paws-access-key=AMZ_ACCESS_KEY and -Paws-secret-key=AMZ_SECRET_KEY')
+	}
+}
+
+task zoneSummary(descrption: 'Print a summary of all hosted zones for the given AWS account', dependsOn: [ checkAwsKeys, classes, testClasses ]) << {
+	javaexec { spec ->
+		main = 'com.widen.examples.ZoneSummary'
+		args = [ getProperty('aws-access-key'), getProperty('aws-secret-key') ]
+		classpath = sourceSets.test.runtimeClasspath
+	}
 }
 
 eclipseClasspath {

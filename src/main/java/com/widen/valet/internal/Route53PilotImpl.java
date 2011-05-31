@@ -12,6 +12,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
@@ -72,6 +73,18 @@ public class Route53PilotImpl implements Route53Pilot
 		}
 
 		return execute(post);
+	}
+
+	@Override
+	public String executeHostedZoneDelete(String zone)
+	{
+		Defense.notBlank(zone, "zone");
+
+		String uri = String.format("%s/%s", HOSTED_ZONE_ENDPOINT, zone);
+
+		HttpDelete delete = new HttpDelete(uri);
+
+		return execute(delete);
 	}
 
 	public String executeChangeInfoGet(String changeId)

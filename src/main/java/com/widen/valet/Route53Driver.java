@@ -44,7 +44,7 @@ public class Route53Driver
 {
 	private Logger log = LoggerFactory.getLogger(Route53Driver.class);
 
-	private static final String ROUTE53_XML_NAMESPACE = "https://route53.amazonaws.com/doc/2010-10-01/";
+	private static final String ROUTE53_XML_NAMESPACE = "https://route53.amazonaws.com/doc/2011-05-05/";
 
 	private final Route53Pilot pilot;
 
@@ -234,6 +234,8 @@ public class Route53Driver
 
 			XMLTag xml = XMLDoc.from(result, true);
 
+			log.trace("List Zone Records:\n{}", xml);
+
 			if (xml.getText("//IsTruncated").equals("false"))
 			{
 				readMore = false;
@@ -247,6 +249,18 @@ public class Route53Driver
 				String type = record.getText("Type");
 				String ttl = record.getText("TTL");
 
+				String weight = null;
+				String setIdentifier = null;
+
+				if (record.hasTag("SetIdentifier"))
+				{
+					setIdentifier = record.getText("SetIdentifier");
+
+					weight = record.getText("Weight");
+
+					log.trace("set: {}; weight: {}", setIdentifier, weight);
+				}
+
 				List<String> values = new ArrayList<String>();
 
 				for (XMLTag resource : record.getChilds("ResourceRecords/ResourceRecord"))
@@ -256,7 +270,14 @@ public class Route53Driver
 
 				Collections.sort(values);
 
-				zoneResources.add(new ZoneResource(name, RecordType.valueOf(type), Integer.parseInt(ttl), values));
+				if (StringUtils.isNotBlank(setIdentifier))
+				{
+					zoneResources.add((new ZoneResource(name, RecordType.valueOf(type), Integer.parseInt(ttl), values, setIdentifier, Integer.parseInt(weight))));
+				}
+				else
+				{
+					zoneResources.add(new ZoneResource(name, RecordType.valueOf(type), Integer.parseInt(ttl), values));
+				}
 
 				lastName = name;
 			}
@@ -424,6 +445,22 @@ public class Route53Driver
 		xml.gotoRoot();
 
 		return parseChangeResourceRecordSetsResponse(zone.getExistentZoneId(), xml);
+	}
+
+	public ZoneChangeStatus deleteZone(final Zone zone, final String comment)
+	{
+		final String result = pilot.executeHostedZoneDelete(zone.getZoneId());
+
+		final XMLTag xml = XMLDoc.from(result, true);
+
+		log.debug("Delete Zone Response:\n{}", xml);
+
+		if (xml.hasTag("Error"))
+		{
+			throw parseErrorResponse(xml);
+		}
+
+		return parseChangeResourceRecordSetsResponse(zone.getZoneId(), xml);
 	}
 
 	private void ensureDomainNameNotAlreadyCreated(String domainName)

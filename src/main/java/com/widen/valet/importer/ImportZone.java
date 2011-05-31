@@ -233,7 +233,7 @@ public class ImportZone
 
 		if (itemToMerge >= 0)
 		{
-			List<String> resources = existing.get(itemToMerge).getResourceRecord();
+			List<String> resources = existing.get(itemToMerge).getResourceRecords();
 
 			existing.remove(itemToMerge);
 

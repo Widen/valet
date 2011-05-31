@@ -15,14 +15,25 @@ public class ZoneResource
 
 	private final int ttl;
 
+	private final String setIdentifier;
+
+	private final int weight;
+
 	private final List<String> resourceRecords;
 
 	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords)
+	{
+		this(name, recordType, ttl, resourceRecords, null, 0);
+	}
+
+	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords, String setIdentifier, int weight)
 	{
 		this.name = name;
 		this.recordType = recordType;
 		this.ttl = ttl;
 		this.resourceRecords = Collections.unmodifiableList(resourceRecords);
+		this.setIdentifier = setIdentifier;
+		this.weight = weight;
 	}
 
 	public String getFirstResource()
@@ -77,5 +88,15 @@ public class ZoneResource
 	public List<String> getResourceRecords()
 	{
 		return resourceRecords;
+	}
+
+	public String getSetIdentifier()
+	{
+		return setIdentifier;
+	}
+
+	public int getWeight()
+	{
+		return weight;
 	}
 }

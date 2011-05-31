@@ -11,7 +11,7 @@
 		</encoder>
 	</appender>
 
-	<logger name="com.widen.valet" level="debug" additivity="false">
+	<logger name="com.widen" level="trace" additivity="false">
 		<appender-ref ref="stdout" />
 	</logger>
 

@@ -139,11 +139,11 @@ public class Route53Driver
 	 */
 	public ZoneChangeStatus queryChangeStatus(ZoneChangeStatus oldStatus)
 	{
-		String response = pilot.executeChangeInfoGet(oldStatus.changeId);
+		String response = pilot.executeChangeInfoGet(oldStatus.getChangeId());
 
 		XMLTag xml = XMLDoc.from(response, true);
 
-		return parseChangeResourceRecordSetsResponse(oldStatus.zoneId, xml);
+		return parseChangeResourceRecordSetsResponse(oldStatus.getZoneId(), xml);
 	}
 
 	private ZoneChangeStatus parseChangeResourceRecordSetsResponse(String zoneId, XMLTag xml)
@@ -197,7 +197,7 @@ public class Route53Driver
 			{
 				inSync = true;
 
-				log.debug("Zone ID {} is now INSYNC", current.zoneId);
+				log.debug("Zone ID {} is now INSYNC", current.getZoneId());
 			}
 			else
 			{
@@ -324,7 +324,7 @@ public class Route53Driver
 
 		for (Zone zone : zones)
 		{
-			if (StringUtils.equalsIgnoreCase(zone.name, domain))
+			if (StringUtils.equalsIgnoreCase(zone.getName(), domain))
 			{
 				return zone;
 			}
@@ -432,7 +432,7 @@ public class Route53Driver
 
 		for (Zone zone : zones)
 		{
-			if (zone.name.equals(domainName))
+			if (zone.getName().equals(domainName))
 			{
 				throw new IllegalArgumentException("Domain name '" + domainName + "' is already hosted by Route53.");
 			}
@@ -453,7 +453,7 @@ public class Route53Driver
 
 		for (Zone zone : zones)
 		{
-			if (StringUtils.equalsIgnoreCase(domainName, zone.name))
+			if (StringUtils.equalsIgnoreCase(domainName, zone.getName()))
 			{
 				return true;
 			}

@@ -14,18 +14,18 @@
 
 package com.widen.valet.importer;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
+
 import com.widen.valet.Route53Driver;
 import com.widen.valet.Zone;
 import com.widen.valet.ZoneChangeStatus;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
 
 /**
  * Create all zones ending in .dns in zones directory. (e.g. "zones/domain.com.dns" --> domain.com)
@@ -85,7 +85,7 @@ public class ImportBulkZones
 	{
 		for (Zone z : existingZonesCache)
 		{
-			if (StringUtils.equalsIgnoreCase(z.name, domain))
+			if (StringUtils.equalsIgnoreCase(z.getName(), domain))
 			{
 				return z;
 			}
@@ -120,10 +120,10 @@ public class ImportBulkZones
 
 			driver.waitForSync(changeStatus);
 
-			zone = driver.zoneDetails(changeStatus.zoneId);
+			zone = driver.zoneDetails(changeStatus.getZoneId());
 		}
 
-		new ImportZone(zoneProperties(f.getAbsolutePath(), zone.zoneId)).run();
+		new ImportZone(zoneProperties(f.getAbsolutePath(), zone.getZoneId())).run();
 	}
 
 	private Properties zoneProperties(String fileName, String zoneId)

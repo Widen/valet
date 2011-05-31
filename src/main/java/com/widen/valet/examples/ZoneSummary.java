@@ -1,13 +1,17 @@
 package com.widen.valet.examples;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import com.widen.valet.RecordType;
 import com.widen.valet.Route53Driver;
 import com.widen.valet.Zone;
 import com.widen.valet.util.NameQueryByRoute53APIService;
 import com.widen.valet.util.NameQueryService;
 import org.apache.commons.lang.StringUtils;
-
-import java.util.*;
 
 public class ZoneSummary
 {
@@ -37,7 +41,7 @@ public class ZoneSummary
 
 		for (Zone z : zones)
 		{
-			System.out.println(z.name + "..");
+			System.out.println(z.getName() + "..");
 
 			Zone zoneDetail = driver.zoneDetails(z);
 
@@ -55,22 +59,22 @@ public class ZoneSummary
 
 		ZoneSummaryData data = new ZoneSummaryData();
 
-		data.zoneId = z.zoneId;
+		data.zoneId = z.getZoneId();
 
-		data.domain = z.name;
+		data.domain = z.getName();
 
-		data.apexRecord = queryService.lookup(z.name, RecordType.A).getFirstValue();
+		data.apexRecord = queryService.lookup(z.getName(), RecordType.A).getFirstValue();
 
-		data.wwwRecord = queryService.lookup("www." + z.name, RecordType.A).getFirstValue();
+		data.wwwRecord = queryService.lookup("www." + z.getName(), RecordType.A).getFirstValue();
 
 		if (data.wwwRecord.isEmpty())
 		{
-			data.wwwRecord = queryService.lookup("www." + z.name, RecordType.CNAME).getFirstValue();
+			data.wwwRecord = queryService.lookup("www." + z.getName(), RecordType.CNAME).getFirstValue();
 		}
 
-		data.nsRecords.addAll(z.nameServers);
+		data.nsRecords.addAll(z.getNameServers());
 
-		data.mxRecords = queryService.lookup(z.name, RecordType.MX).values;
+		data.mxRecords = queryService.lookup(z.getName(), RecordType.MX).values;
 
 		return data;
 	}

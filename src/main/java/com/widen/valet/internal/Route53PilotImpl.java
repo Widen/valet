@@ -1,5 +1,13 @@
 package com.widen.valet.internal;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.security.SignatureException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -11,19 +19,9 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.security.SignatureException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.TimeZone;
-
 public class Route53PilotImpl implements Route53Pilot
 {
-	private static final String ROUTE_53_ENDPOINT = "https://route53.amazonaws.com/2010-10-01/";
+	private static final String ROUTE_53_ENDPOINT = "https://route53.amazonaws.com/2011-05-05/";
 
 	private static final String HOSTED_ZONE_ENDPOINT = ROUTE_53_ENDPOINT + "hostedzone";
 

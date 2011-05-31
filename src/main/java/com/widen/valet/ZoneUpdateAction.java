@@ -1,27 +1,27 @@
 package com.widen.valet;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import com.mycila.xmltool.XMLTag;
 import org.apache.commons.lang.builder.CompareToBuilder;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 {
-	public final String action;
+	private final String action;
 
-	public final String name;
+	private final String name;
 
-	public final RecordType type;
+	private final RecordType type;
 
-	public final int ttl;
+	private final int ttl;
 
-	public final List<String> resourceRecord;
+	private final List<String> resourceRecord;
 
 	private ZoneUpdateAction(String action, String name, RecordType type, int ttl, List<String> resourceRecords)
 	{
@@ -102,5 +102,30 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 	public int compareTo(ZoneUpdateAction rhs)
 	{
 		return new CompareToBuilder().append(action, rhs.action).append(name, rhs.name).append(type, rhs.type).toComparison();
+	}
+
+	public String getAction()
+	{
+		return action;
+	}
+
+	public String getName()
+	{
+		return name;
+	}
+
+	public RecordType getType()
+	{
+		return type;
+	}
+
+	public int getTtl()
+	{
+		return ttl;
+	}
+
+	public List<String> getResourceRecord()
+	{
+		return resourceRecord;
 	}
 }

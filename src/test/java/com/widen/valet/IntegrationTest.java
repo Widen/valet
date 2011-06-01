@@ -38,11 +38,9 @@ public class IntegrationTest
 	{
 		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
 
-		actions.add(ZoneUpdateAction.createRoundRobinAction("wwwrw." + zone.getName(), RecordType.A, 600, "set1", 1, "10.0.0.1"));
-
-		actions.add(ZoneUpdateAction.createRoundRobinAction("wwwrw." + zone.getName(), RecordType.A, 600, "set2", 2, "10.0.0.2"));
-
-		actions.add(ZoneUpdateAction.createRoundRobinAction("wwwrw." + zone.getName(), RecordType.A, 600, "set3", 0, "10.0.0.3"));
+		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.1").withRoundRobinData("set1", 1).buildCreate());
+		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.2").withRoundRobinData("set2", 2).buildCreate());
+		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.3").withRoundRobinData("set3", 3).buildCreate());
 
 		final ZoneChangeStatus status = driver.updateZone(zone, "add rr resources", actions);
 
@@ -53,9 +51,9 @@ public class IntegrationTest
 	{
 		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
 
-		actions.add(ZoneUpdateAction.createAction("www." + zone.getName(), RecordType.A, 600, "127.0.0.1"));
+		actions.add(new ZoneUpdateAction.Builder().withData("www", zone, RecordType.A, "127.0.0.1").buildCreate());
 
-		actions.add(ZoneUpdateAction.createAction(zone.getName(), RecordType.MX, 600, "10 mail10.example.com", "20 mail20.example.com", "30 mail30.example.com"));
+		actions.add(new ZoneUpdateAction.Builder().withData(zone.getName(), RecordType.MX, Arrays.asList("10 mail10.example.com", "20 mail20.example.com", "30 mail30.example.com")).buildCreate());
 
 		final ZoneChangeStatus status = driver.updateZone(zone, "add resources", actions);
 
@@ -83,7 +81,7 @@ public class IntegrationTest
 		{
 			if (!keepTypes.contains(resource.getRecordType()))
 			{
-				deleteActions.add(ZoneUpdateAction.deleteAction(resource));
+				deleteActions.add(new ZoneUpdateAction.Builder().fromZoneResource(resource).buildDelete());
 			}
 		}
 

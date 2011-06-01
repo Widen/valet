@@ -2,6 +2,7 @@ package com.widen.valet;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,7 +32,7 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 
 	private final List<String> resourceRecords;
 
-	private ZoneUpdateAction(String action, String name, RecordType type, int ttl, List<String> resourceRecords, String setIdentifier, int weight)
+	private ZoneUpdateAction(String action, String name, RecordType type, int ttl, String setIdentifier, int weight, List<String> resourceRecords)
 	{
 		this.action = action;
 		this.name = name;
@@ -44,13 +45,86 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 		this.resourceRecords = Collections.unmodifiableList(resourceRecords);
 	}
 
-	private ZoneUpdateAction(String action, String name, RecordType type, int ttl, List<String> resourceRecords)
+	public static class Builder
 	{
-		this(action, name, type, ttl, resourceRecords, null, 0);
+		private String name;
+		private RecordType type;
+		private int ttl = 600;
+		private List<String> resourceRecords = new ArrayList<String>();
+		private String setIdentifier = null;
+		private int weight = 0;
+
+		public ZoneUpdateAction buildCreate()
+		{
+			return new ZoneUpdateAction("CREATE", name, type, ttl, setIdentifier, weight, resourceRecords);
+		}
+
+		public ZoneUpdateAction buildDelete()
+		{
+			return new ZoneUpdateAction("DELETE", name, type, ttl, setIdentifier, weight, resourceRecords);
+		}
+
+		/**
+		 * Create zone resource using 'simple' name -- without the zone name appended
+		 *
+		 * @param resourceName
+		 * @param zone
+		 * @param type
+		 * @param resourceValues
+		 * @return
+		 */
+		public Builder withData(String resourceName, Zone zone, RecordType type, String... resourceValues)
+		{
+			return withData(String.format("%s.%s", resourceName, zone.getName()), type, Arrays.asList(resourceValues));
+		}
+
+		public Builder withData(String name, RecordType type, Collection<String> resourceValues)
+		{
+			this.type = type;
+			this.name = name;
+			this.resourceRecords.addAll(resourceValues);
+			return this;
+		}
+
+		public Builder withTtl(int ttl)
+		{
+			this.ttl = ttl;
+			return this;
+		}
+
+		public Builder withResourceRecords(List<String> resourceRecords)
+		{
+			this.resourceRecords.addAll(resourceRecords);
+			return this;
+		}
+
+		public Builder withResourceRecords(String... resourceRecords)
+		{
+			this.resourceRecords.addAll(Arrays.asList(resourceRecords));
+			return this;
+		}
+
+		public Builder withRoundRobinData(String setIdentifier, int weight)
+		{
+			this.setIdentifier = setIdentifier;
+			this.weight = weight;
+			return this;
+		}
+
+		public Builder fromZoneResource(ZoneResource resource)
+		{
+			name = resource.getName();
+			type = resource.getRecordType();
+			ttl = resource.getTtl();
+			resourceRecords.addAll(resource.getResourceRecords());
+			setIdentifier = resource.getSetIdentifier();
+			weight = resource.getWeight();
+			return this;
+		}
 	}
 
 	/**
-	 * Append additional resource records to update action.
+	 * Append additional resource records to an existing update action.
 	 *
 	 * @return
 	 * 		New ZoneUpdateAction instance with merged resource records.
@@ -61,61 +135,7 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 		mergedResources.addAll(action.resourceRecords);
 		mergedResources.addAll(resources);
 
-		return new ZoneUpdateAction(action.action, action.name, action.type, action.ttl, mergedResources);
-	}
-
-	/**
-	 * Construct a "CREATE" action. If the resources are pre-existing a "DELETE" action must be used.
-	 *
-	 * @return
-	 * 		An action that the Route53Driver can execute
-	 */
-	public static ZoneUpdateAction createAction(String name, RecordType type, int ttl, String... resource)
-	{
-		return new ZoneUpdateAction("CREATE", name, type, ttl, Arrays.asList(resource));
-	}
-
-	/**
-	 * Construct a "CREATE" action that includes Round Robin attributes. If the resources are pre-existing a "DELETE" action must be used.
-	 *
-	 * @return
-	 * 		An action that the Route53Driver can execute
-	 */
-	public static ZoneUpdateAction createRoundRobinAction(String name, RecordType type, int ttl, String setIdentifier, int weight, String... resource)
-	{
-		return new ZoneUpdateAction("CREATE", name, type, ttl, Arrays.asList(resource), setIdentifier, weight);
-	}
-
-	/**
-	 * Construct a "DELETE" action.
-	 *
-	 * @return
-	 * 		An action that the Route53Driver can execute
-	 */
-	public static ZoneUpdateAction deleteAction(String name, RecordType type, int ttl, String... resource)
-	{
-		return new ZoneUpdateAction("DELETE", name, type, ttl, Arrays.asList(resource));
-	}
-
-	/**
-	 * Construct a "DELETE" action.
-	 *
-	 * @return An action that the Route53Driver can execute
-	 */
-	public static ZoneUpdateAction deleteRoundRobinAction(String name, RecordType type, int ttl, String setIdentifier, int weight, String... resource)
-	{
-		return new ZoneUpdateAction("DELETE", name, type, ttl, Arrays.asList(resource), setIdentifier, weight);
-	}
-
-	/**
-	 * Construct a "DELETE" action from an existing ZoneResource
-	 *
-	 * @return
-	 * 		An action that the Route53Driver can execute
-	 */
-	public static ZoneUpdateAction deleteAction(ZoneResource resource)
-	{
-		return deleteRoundRobinAction(resource.getName(), resource.getRecordType(), resource.getTtl(), resource.getSetIdentifier(), resource.getWeight(), resource.getResourceRecords().toArray(new String[] {}));
+		return new ZoneUpdateAction(action.action, action.name, action.type, action.ttl, action.getSetIdentifier(), action.getWeight(), mergedResources);
 	}
 
 	void addChangeTag(XMLTag xml)
@@ -162,19 +182,19 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 	public boolean equals(Object obj)
 	{
 		ZoneUpdateAction rhs = (ZoneUpdateAction) obj;
-		return new EqualsBuilder().append(action, rhs.action).append(name, rhs.name).append(type, rhs.type).isEquals();
+		return new EqualsBuilder().append(action, rhs.action).append(name, rhs.name).append(type, rhs.type).append(setIdentifier, rhs.setIdentifier).isEquals();
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return new HashCodeBuilder().append(action).append(name).append(type).toHashCode();
+		return new HashCodeBuilder().append(action).append(name).append(type).append(setIdentifier).toHashCode();
 	}
 
 	@Override
 	public int compareTo(ZoneUpdateAction rhs)
 	{
-		return new CompareToBuilder().append(action, rhs.action).append(name, rhs.name).append(type, rhs.type).toComparison();
+		return new CompareToBuilder().append(action, rhs.action).append(name, rhs.name).append(type, rhs.type).append(setIdentifier, rhs.setIdentifier).toComparison();
 	}
 
 	public String getAction()
@@ -195,6 +215,16 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 	public int getTtl()
 	{
 		return ttl;
+	}
+
+	public String getSetIdentifier()
+	{
+		return setIdentifier;
+	}
+
+	public int getWeight()
+	{
+		return weight;
 	}
 
 	public List<String> getResourceRecords()

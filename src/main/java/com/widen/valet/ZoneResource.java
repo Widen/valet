@@ -43,12 +43,12 @@ public class ZoneResource
 
 	public final ZoneUpdateAction createAction()
 	{
-		return ZoneUpdateAction.createAction(name, recordType, ttl, resourceRecords.toArray(new String[0]));
+		return new ZoneUpdateAction.Builder().withData(name, recordType, resourceRecords).withTtl(ttl).buildCreate();
 	}
 
 	public final ZoneUpdateAction deleteAction()
 	{
-		return ZoneUpdateAction.deleteAction(name, recordType, ttl, resourceRecords.toArray(new String[0]));
+		return new ZoneUpdateAction.Builder().withData(name, recordType, resourceRecords).withTtl(ttl).buildDelete();
 	}
 
 	@Override

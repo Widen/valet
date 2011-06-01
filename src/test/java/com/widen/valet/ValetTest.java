@@ -56,8 +56,8 @@ public class ValetTest
 	{
 		List<ZoneUpdateAction> updates = new ArrayList<ZoneUpdateAction>();
 
-		updates.add(ZoneUpdateAction.deleteAction("uriahacarpenter.com", RecordType.A, 600, "127.0.0.1"));
-		updates.add(ZoneUpdateAction.createAction("uriahacarpenter.com", RecordType.A, 600, "127.0.0.1"));
+		updates.add(new ZoneUpdateAction.Builder().withData("uriahacarpenter.com", RecordType.A, Arrays.asList("127.0.0.1")).buildDelete());
+		updates.add(new ZoneUpdateAction.Builder().withData("uriahacarpenter.com", RecordType.A, Arrays.asList("127.0.0.1")).buildCreate());
 
 		Zone zone = new Zone("Z1234", "uriahcarpenter.com.", "", "", Collections.<String>emptyList());
 

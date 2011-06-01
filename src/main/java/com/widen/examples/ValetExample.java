@@ -30,7 +30,7 @@ public class ValetExample
 	{
 		String domain = "foodomain.com.";
 
-		String resource = String.format("www.%s", domain);
+		String resource = "www";
 
 		String resourceValue = "127.0.0.2";
 
@@ -65,11 +65,14 @@ public class ValetExample
 		if (lookup.exists)
 		{
 			//if the resource exists it must be deleted within the update transaction
-			ZoneUpdateAction delete = ZoneUpdateAction.deleteAction(resource, RecordType.A, 600, lookup.getFirstValue());
+
+			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(resource, RecordType.A, lookup.values).withTtl(lookup.ttl).buildDelete();
+					//ZoneUpdateAction.deleteAction(resource, RecordType.A, 600, lookup.getFirstValue());
 			actions.add(delete);
 		}
 
-		ZoneUpdateAction create = ZoneUpdateAction.createAction(resource, RecordType.A, 600, resourceValue);
+		ZoneUpdateAction create = new ZoneUpdateAction.Builder().withData(resource, zone, RecordType.A, resourceValue).buildCreate();
+
 		actions.add(create);
 
 		//Update zone will throw a ValetException if Route53 rejects the transaction block

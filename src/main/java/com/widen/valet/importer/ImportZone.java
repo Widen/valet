@@ -207,7 +207,7 @@ public class ImportZone
 
 		if (!lookupRecord.exists)
 		{
-			ZoneUpdateAction action = ZoneUpdateAction.createAction(name, type, defaultTTL, value);
+			ZoneUpdateAction action = new ZoneUpdateAction.Builder().withData(name, type, Arrays.asList(value)).withTtl(defaultTTL).buildCreate();
 
 			return Arrays.asList(mergeAction(action, existing));
 		}
@@ -219,9 +219,9 @@ public class ImportZone
 		}
 		else
 		{
-			ZoneUpdateAction delete = ZoneUpdateAction.deleteAction(name, type, lookupRecord.ttl, lookupRecord.values.toArray(new String[] {}));
+			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(name, type, lookupRecord.values).withTtl(lookupRecord.ttl).buildDelete();
 
-			ZoneUpdateAction create = ZoneUpdateAction.createAction(name, type, defaultTTL, value);
+			ZoneUpdateAction create = new ZoneUpdateAction.Builder().withData(name, type, Arrays.asList(value)).withTtl(defaultTTL).buildCreate();
 
 			return Arrays.asList(mergeAction(delete, existing), mergeAction(create, existing));
 		}

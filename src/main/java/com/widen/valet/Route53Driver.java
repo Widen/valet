@@ -14,8 +14,6 @@
 
 package com.widen.valet;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,14 +26,13 @@ import java.util.UUID;
 import com.mycila.xmltool.XMLDoc;
 import com.mycila.xmltool.XMLDocumentException;
 import com.mycila.xmltool.XMLTag;
+import com.widen.valet.internal.DateUtil;
 import com.widen.valet.internal.Defense;
 import com.widen.valet.internal.Route53Pilot;
 import com.widen.valet.internal.Route53PilotImpl;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static java.util.TimeZone.getTimeZone;
 
 /**
  * Primary interface to interact with Route53.  See {@link com.widen.examples.ValetExample} for usage example.
@@ -154,18 +151,7 @@ public class Route53Driver
 
 		ZoneChangeStatus.Status status = ZoneChangeStatus.Status.valueOf(changeInfo.getText("Status"));
 
-		Date date = null;
-
-		try
-		{
-			SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-			format.setTimeZone(getTimeZone("Zulu"));
-			date = format.parse(changeInfo.getText("SubmittedAt"));
-		}
-		catch (ParseException e)
-		{
-			throw new RuntimeException(e);
-		}
+		Date date = DateUtil.fromZulu(changeInfo.getText("SubmittedAt"));
 
 		return new ZoneChangeStatus(zoneId, changeId, status, date);
 	}

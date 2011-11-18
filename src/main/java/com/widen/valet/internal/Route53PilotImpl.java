@@ -20,6 +20,14 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 
+/**
+ * Route53 Pilot is responsible for communicating with the AWS Route53 REST endpoint.
+ *
+ * At minimum, the pilot requires the AWS access and secret key.
+ *
+ * <p>You may use an alternate constructor to inject the {@link HttpClient} instance to use.
+ * This is useful if your environment requires proxy configuration to access the Route53 endpoint.
+ */
 public class Route53PilotImpl implements Route53Pilot
 {
 	private static final String ROUTE_53_ENDPOINT = "https://route53.amazonaws.com/2011-05-05/";
@@ -30,20 +38,27 @@ public class Route53PilotImpl implements Route53Pilot
 
 	private final String awsSecret;
 
-	public Route53PilotImpl(String awsAccessKey, String awsSecret)
+	private final HttpClient httpClient;
+
+	public Route53PilotImpl(String awsAccessKey, String awsSecret, HttpClient httpClient)
 	{
 		Defense.notBlank(awsAccessKey, "awsAccessKey");
 		Defense.notBlank(awsSecret, "awsSecret");
 
 		this.awsAccessKey = awsAccessKey;
 		this.awsSecret = awsSecret;
+		this.httpClient = httpClient;
+	}
+
+	public Route53PilotImpl(String awsAccessKey, String awsSecret)
+	{
+		this(awsAccessKey, awsSecret, new DefaultHttpClient());
 	}
 
 	public String executeHostedZoneGet()
 	{
 		return executeHostedZoneGet(null);
 	}
-
 
 	public String executeHostedZoneGet(String zone)
 	{
@@ -133,8 +148,6 @@ public class Route53PilotImpl implements Route53Pilot
 	{
 		String date = new SimpleDateFormat("EEEE, dd-MMM-yy HH:mm:ss zzz", java.util.Locale.US).format(new Date());
 
-		HttpClient httpclient = new DefaultHttpClient();
-
 		String signature = sign(date, awsSecret);
 
 		request.addHeader("Date", date);
@@ -147,7 +160,7 @@ public class Route53PilotImpl implements Route53Pilot
 
 		try
 		{
-			HttpResponse response = httpclient.execute(request);
+			HttpResponse response = httpClient.execute(request);
 
 			HttpEntity entity = response.getEntity();
 
@@ -165,20 +178,20 @@ public class Route53PilotImpl implements Route53Pilot
 	}
 
 	/**
-		 * Computes RFC 2104-compliant HMAC signature.
-		 */
-		private static String sign(String data, String key)
+	 * Computes RFC 2104-compliant HMAC signature.
+	 */
+	private static String sign(String data, String key)
+	{
+		try
 		{
-			try
-			{
-				Mac mac = Mac.getInstance("HmacSHA1");
-				mac.init(new SecretKeySpec(key.getBytes(), "HmacSHA1"));
-				return Base64.encodeBytes(mac.doFinal(data.getBytes("UTF-8")));
-			}
-			catch (Exception e)
-			{
-				throw new RuntimeException(new SignatureException("Failed to generate signature: " + e.getMessage(), e));
-			}
+			Mac mac = Mac.getInstance("HmacSHA1");
+			mac.init(new SecretKeySpec(key.getBytes(), "HmacSHA1"));
+			return Base64.encodeBytes(mac.doFinal(data.getBytes("UTF-8")));
 		}
+		catch (Exception e)
+		{
+			throw new RuntimeException(new SignatureException("Failed to generate signature: " + e.getMessage(), e));
+		}
+	}
 
 }

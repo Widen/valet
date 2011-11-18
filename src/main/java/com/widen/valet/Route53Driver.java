@@ -31,6 +31,7 @@ import com.widen.valet.internal.Defense;
 import com.widen.valet.internal.Route53Pilot;
 import com.widen.valet.internal.Route53PilotImpl;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,17 @@ public class Route53Driver
 	public Route53Driver(String awsUserKey, String awsSecretKey)
 	{
 		this.pilot = new Route53PilotImpl(awsUserKey, awsSecretKey);
+	}
+
+	/**
+	 * Construct driver using AWS user/secret keys with custom {@link HttpClient} instance.
+	 * @param awsUserKey
+	 * @param awsSecretKey
+	 * @param httpClient
+	 */
+	public Route53Driver(String awsUserKey, String awsSecretKey, HttpClient httpClient)
+	{
+		this.pilot = new Route53PilotImpl(awsUserKey, awsSecretKey, httpClient);
 	}
 
 	/**
@@ -92,6 +104,13 @@ public class Route53Driver
 		if (updateActions.isEmpty())
 		{
 			return new ZoneChangeStatus(zone.getExistentZoneId(), "no-change-submitted", ZoneChangeStatus.Status.INSYNC, new Date());
+		}
+
+		System.err.println("list size: " + updateActions.size());
+
+		if (updateActions.size() > 100)
+		{
+			throw new ValetException("Route53 will only process 100 actions per request. Use com.widen.util.ListUtil:split() to make multiple requests.");
 		}
 
 		String commentXml = StringUtils.defaultIfEmpty(comment, String.format("Modify %s records.", updateActions.size()));
@@ -145,7 +164,17 @@ public class Route53Driver
 
 	private ZoneChangeStatus parseChangeResourceRecordSetsResponse(String zoneId, XMLTag xml)
 	{
-		XMLTag changeInfo = xml.gotoChild("ChangeInfo");
+		XMLTag changeInfo;
+
+		try
+		{
+			changeInfo = xml.gotoChild("ChangeInfo");
+		}
+		catch (XMLDocumentException xmlde)
+		{
+			// No 'ChangeInfo' element
+			return new ZoneChangeStatus(zoneId, null, null, null);
+		}
 
 		String changeId = StringUtils.substringAfter(changeInfo.getText("Id"), "/change/");
 
@@ -222,6 +251,11 @@ public class Route53Driver
 
 			log.trace("List Zone Records:\n{}", xml);
 
+			if (xml.hasTag("Error"))
+			{
+				throw parseErrorResponse(xml);
+			}
+
 			if (xml.getText("//IsTruncated").equals("false"))
 			{
 				readMore = false;
@@ -233,37 +267,38 @@ public class Route53Driver
 			{
 				String name = record.getText("Name");
 				String type = record.getText("Type");
-				String ttl = record.getText("TTL");
 
 				String weight = null;
 				String setIdentifier = null;
-
 				if (record.hasTag("SetIdentifier"))
 				{
 					setIdentifier = record.getText("SetIdentifier");
-
 					weight = record.getText("Weight");
-
-					log.trace("set: {}; weight: {}", setIdentifier, weight);
 				}
 
+				String ttl = null;
+				String aliasZoneId = null;
+				String aliasDnsName = null;
 				List<String> values = new ArrayList<String>();
 
-				for (XMLTag resource : record.getChilds("ResourceRecords/ResourceRecord"))
+				if (record.hasTag("AliasTarget"))
 				{
-					values.add(resource.getText("Value"));
-				}
-
-				Collections.sort(values);
-
-				if (StringUtils.isNotBlank(setIdentifier))
-				{
-					zoneResources.add((new ZoneResource(name, RecordType.valueOf(type), Integer.parseInt(ttl), values, setIdentifier, Integer.parseInt(weight))));
+					aliasZoneId = record.getText("AliasTarget/HostedZoneId");
+					aliasDnsName = record.getText("AliasTarget/DNSName");
 				}
 				else
 				{
-					zoneResources.add(new ZoneResource(name, RecordType.valueOf(type), Integer.parseInt(ttl), values));
+					ttl = record.getText("TTL");
+
+					for (XMLTag resource : record.getChilds("ResourceRecords/ResourceRecord"))
+					{
+						values.add(resource.getText("Value"));
+					}
+
+					Collections.sort(values);
 				}
+
+				zoneResources.add((new ZoneResource(name, RecordType.valueOf(type), parseIntWithDefault(ttl, 0), values, setIdentifier, parseIntWithDefault(weight, 0), aliasZoneId, aliasDnsName)));
 
 				lastName = name;
 			}
@@ -276,6 +311,16 @@ public class Route53Driver
 		list.addAll(zoneResources);
 
 		return list;
+	}
+
+	private int parseIntWithDefault(String s, int defaultValue)
+	{
+		if (StringUtils.isEmpty(s))
+		{
+			return defaultValue;
+		}
+
+		return Integer.parseInt(s);
 	}
 
 	/**

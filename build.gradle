@@ -1,3 +1,5 @@
+import org.apache.tools.ant.taskdefs.Jar
+
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
@@ -75,6 +77,6 @@ eclipseClasspath {
   containers = [ 'org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.6' ]
 }
 
-eclipse.dependsOn = [ cleanEclipseClasspath, eclipseClasspath ]
+tasks.eclipse.dependsOn = [ cleanEclipseClasspath, eclipseClasspath ]
 
-idea.dependsOn = [ cleanIdeaModule, ideaModule ]
+tasks.idea.dependsOn = [ cleanIdeaModule, ideaModule ]

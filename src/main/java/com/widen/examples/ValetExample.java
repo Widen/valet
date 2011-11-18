@@ -66,12 +66,12 @@ public class ValetExample
 		{
 			//if the resource exists it must be deleted within the update transaction
 
-			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(resource, RecordType.A, lookup.values).withTtl(lookup.ttl).buildDelete();
+			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(resource, RecordType.A, lookup.values).withTtl(lookup.ttl).buildDeleteAction();
 					//ZoneUpdateAction.deleteAction(resource, RecordType.A, 600, lookup.getFirstValue());
 			actions.add(delete);
 		}
 
-		ZoneUpdateAction create = new ZoneUpdateAction.Builder().withData(resource, zone, RecordType.A, resourceValue).buildCreate();
+		ZoneUpdateAction create = new ZoneUpdateAction.Builder().withData(resource, zone, RecordType.A, resourceValue).buildCreateAction();
 
 		actions.add(create);
 

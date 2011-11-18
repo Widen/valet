@@ -123,7 +123,9 @@ public class ImportBulkZones
 			zone = driver.zoneDetails(changeStatus.getZoneId());
 		}
 
-		new ImportZone(zoneProperties(f.getAbsolutePath(), zone.getZoneId())).run();
+		ImportZone importZone = new ImportZone(zoneProperties(f.getAbsolutePath(), zone.getZoneId()));
+
+		importZone.run();
 	}
 
 	private Properties zoneProperties(String fileName, String zoneId)
@@ -137,6 +139,7 @@ public class ImportBulkZones
 		properties.put("widen.valet.aws-route53-zone-id", zoneId);
 		properties.put("widen.valet.aws-name-server", "route53rrs");
 		properties.put("widen.valet.default-ttl", "600");
+		properties.put("widen.valet.clean-zone-by-deleteing-all-records", "true");
 
 		return properties;
 	}

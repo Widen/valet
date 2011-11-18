@@ -27,6 +27,7 @@ import com.widen.valet.RecordType;
 import com.widen.valet.Route53Driver;
 import com.widen.valet.Zone;
 import com.widen.valet.ZoneChangeStatus;
+import com.widen.valet.ZoneResource;
 import com.widen.valet.ZoneUpdateAction;
 import com.widen.valet.util.ListUtil;
 import com.widen.valet.util.NameQueryByRoute53APIService;
@@ -65,6 +66,8 @@ public class ImportZone
 
 	private final boolean dryRun;
 
+	private final boolean cleanZone;
+
 	private final String nameServer;
 
 	private NameQueryService queryService;
@@ -94,6 +97,7 @@ public class ImportZone
 		defaultTTL = Integer.parseInt(getAndVerifyProperty("widen.valet.default-ttl", properties));
 		dryRun = Boolean.parseBoolean(getAndVerifyProperty("widen.valet.dry-run", properties));
 		nameServer = getAndVerifyProperty("widen.valet.aws-name-server", properties);
+		cleanZone = Boolean.parseBoolean(getAndVerifyProperty("widen.valet.clean-zone-by-deleteing-all-records", properties));
 	}
 
 	private String getAndVerifyProperty(String key, Properties properties)
@@ -113,6 +117,27 @@ public class ImportZone
 		Route53Driver driver = new Route53Driver(awsAccessKey, awsPrivateKey);
 
 		Zone zone = driver.zoneDetails(route53ZoneId);
+
+		if (cleanZone)
+		{
+			List<ZoneUpdateAction> deletes = new ArrayList<ZoneUpdateAction>();
+
+			for (ZoneResource resource : driver.listZoneRecords(zone))
+			{
+				if (!Arrays.asList(RecordType.NS, RecordType.SOA).contains(resource.getRecordType()))
+				{
+					ZoneUpdateAction zua = new ZoneUpdateAction.Builder().fromZoneResource(resource).buildDeleteAction();
+					deletes.add(zua);
+				}
+			}
+
+			for (List<ZoneUpdateAction> deleteChunk : ListUtil.split(deletes, 100))
+			{
+				ZoneChangeStatus status = driver.updateZone(zone, "Clean all zone records before re-import", deleteChunk);
+
+				driver.waitForSync(status);
+			}
+		}
 
 		if ("route53rrs".equals(nameServer))
 		{
@@ -207,7 +232,7 @@ public class ImportZone
 
 		if (!lookupRecord.exists)
 		{
-			ZoneUpdateAction action = new ZoneUpdateAction.Builder().withData(name, type, Arrays.asList(value)).withTtl(defaultTTL).buildCreate();
+			ZoneUpdateAction action = new ZoneUpdateAction.Builder().withData(name, type, Arrays.asList(value)).withTtl(defaultTTL).buildCreateAction();
 
 			return Arrays.asList(mergeAction(action, existing));
 		}
@@ -219,9 +244,9 @@ public class ImportZone
 		}
 		else
 		{
-			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(name, type, lookupRecord.values).withTtl(lookupRecord.ttl).buildDelete();
+			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(name, type, lookupRecord.values).withTtl(lookupRecord.ttl).buildDeleteAction();
 
-			ZoneUpdateAction create = new ZoneUpdateAction.Builder().withData(name, type, Arrays.asList(value)).withTtl(defaultTTL).buildCreate();
+			ZoneUpdateAction create = new ZoneUpdateAction.Builder().withData(name, type, Arrays.asList(value)).withTtl(defaultTTL).buildCreateAction();
 
 			return Arrays.asList(mergeAction(delete, existing), mergeAction(create, existing));
 		}

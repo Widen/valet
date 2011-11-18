@@ -6,7 +6,7 @@ View [ValetExample](src/main/java/com/widen/examples/ValetExample.java) for typi
 
 Includes [automation classes](src/main/java/com/widen/valet/importer) to import/one-way-sync existing Windows DNS server files.
 
-To run the example [ZoneSummary](src/main/java/com/widen/examples/ZoneSummary.java) application using Gradle
+To run the example [ZoneSummary](src/main/java/com/widen/examples/ZoneSummary.java) application using [Gradle](http://www.gradle.org/)
 
     gradle zoneSummary -Paws-access-key=MY_AWS_ACCESS_KEY -Paws-secret-key=MY_AWS_SECRET_KEY
 
@@ -19,12 +19,12 @@ Available via Maven:
 
 Or browse the repo directly at [https://widen.artifactoryonline.com/widen/libs-widen-public](https://widen.artifactoryonline.com/widen/libs-widen-public/widen/valet/)
 
-For new Route53 feature support, view the `develop` branch.
-
 Change Log:
 
     0.2 - Weighted Round Robin support
+    	  Alias Resource Record support
           Delete zone implemented
+          HttpClient instance can be supplied to Route53Driver to support custom proxy server configuration
 
     0.1 - Initial version
 

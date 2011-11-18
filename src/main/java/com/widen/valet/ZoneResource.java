@@ -15,25 +15,37 @@ public class ZoneResource
 
 	private final int ttl;
 
-	private final String setIdentifier;
+	private final String wrrSetIdentifier;
 
-	private final int weight;
+	private final int wrrWeight;
+
+	private final String aliasZoneId;
+
+	private final String aliasDnsName;
 
 	private final List<String> resourceRecords;
 
+	/**
+	 * Internal usage for 'normal' resources
+	 */
 	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords)
 	{
-		this(name, recordType, ttl, resourceRecords, null, 0);
+		this(name, recordType, ttl, resourceRecords, null, 0, null, null);
 	}
 
-	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords, String setIdentifier, int weight)
+	/**
+	 * Internal usage for 'weighted round-robin' and 'alias' resources
+	 */
+	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords, String wrrSetIdentifier, int wrrWeight, String aliasZoneId, String aliasDnsName)
 	{
 		this.name = name;
 		this.recordType = recordType;
 		this.ttl = ttl;
 		this.resourceRecords = Collections.unmodifiableList(resourceRecords);
-		this.setIdentifier = setIdentifier;
-		this.weight = weight;
+		this.wrrSetIdentifier = wrrSetIdentifier;
+		this.wrrWeight = wrrWeight;
+		this.aliasZoneId = aliasZoneId;
+		this.aliasDnsName = aliasDnsName;
 	}
 
 	public String getFirstResource()
@@ -43,12 +55,12 @@ public class ZoneResource
 
 	public final ZoneUpdateAction createAction()
 	{
-		return new ZoneUpdateAction.Builder().withData(name, recordType, resourceRecords).withTtl(ttl).buildCreate();
+		return new ZoneUpdateAction.Builder().withData(name, recordType, resourceRecords).withTtl(ttl).addRoundRobinData(wrrSetIdentifier, wrrWeight).addAliasData(aliasZoneId, aliasDnsName).buildCreateAction();
 	}
 
 	public final ZoneUpdateAction deleteAction()
 	{
-		return new ZoneUpdateAction.Builder().withData(name, recordType, resourceRecords).withTtl(ttl).buildDelete();
+		return new ZoneUpdateAction.Builder().withData(name, recordType, resourceRecords).withTtl(ttl).addRoundRobinData(wrrSetIdentifier, wrrWeight).addAliasData(aliasZoneId, aliasDnsName).buildDeleteAction();
 	}
 
 	@Override
@@ -90,13 +102,23 @@ public class ZoneResource
 		return resourceRecords;
 	}
 
-	public String getSetIdentifier()
+	public String getWrrSetIdentifier()
 	{
-		return setIdentifier;
+		return wrrSetIdentifier;
 	}
 
-	public int getWeight()
+	public int getWrrWeight()
 	{
-		return weight;
+		return wrrWeight;
+	}
+
+	public String getAliasZoneId()
+	{
+		return aliasZoneId;
+	}
+
+	public String getAliasDnsName()
+	{
+		return aliasDnsName;
 	}
 }

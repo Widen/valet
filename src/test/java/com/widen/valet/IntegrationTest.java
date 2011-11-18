@@ -18,29 +18,54 @@ public class IntegrationTest
 
 	public static void main(String[] args)
 	{
-		new IntegrationTest().run();
+		new IntegrationTest().runTest();
 	}
 
-	private void run()
+	private void runTest()
 	{
 		setupDriver();
 
 		final Zone zone = createZone(String.format("valet-test-zone-%s.net.", System.currentTimeMillis()));
 
-		addResources(zone);
+		try
+		{
+			addResources(zone);
 
-		addRoundRobinResources(zone);
+			addRoundRobinResources(zone);
 
-		deleteZone(zone);
+			addAliasResources(zone);
+		}
+		finally
+		{
+			deleteZone(zone);
+		}
+	}
+
+	private void runDeleteZone(String domain)
+	{
+		setupDriver();
+
+		deleteZone(driver.zoneDetailsForDomain(domain));
+	}
+
+	private void addAliasResources(Zone zone)
+	{
+		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
+
+		actions.add(new ZoneUpdateAction.Builder().withData(zone.getName(), RecordType.A).addAliasData("Z123456789", "some-load-balancer.us-east-1.elb.amazonaws.com.").buildCreateAction());
+
+		final ZoneChangeStatus status = driver.updateZone(zone, "add alias resources", actions);
+
+		driver.waitForSync(status);
 	}
 
 	private void addRoundRobinResources(Zone zone)
 	{
 		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
 
-		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.1").withRoundRobinData("set1", 1).buildCreate());
-		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.2").withRoundRobinData("set2", 2).buildCreate());
-		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.3").withRoundRobinData("set3", 3).buildCreate());
+		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.1").addRoundRobinData("set1", 1).buildCreateAction());
+		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.2").addRoundRobinData("set2", 2).buildCreateAction());
+		actions.add(new ZoneUpdateAction.Builder().withData("wwwrr", zone, RecordType.A, "127.0.0.3").addRoundRobinData("set3", 3).buildCreateAction());
 
 		final ZoneChangeStatus status = driver.updateZone(zone, "add rr resources", actions);
 
@@ -51,9 +76,9 @@ public class IntegrationTest
 	{
 		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
 
-		actions.add(new ZoneUpdateAction.Builder().withData("www", zone, RecordType.A, "127.0.0.1").buildCreate());
+		actions.add(new ZoneUpdateAction.Builder().withData("www", zone, RecordType.A, "127.0.0.1").buildCreateAction());
 
-		actions.add(new ZoneUpdateAction.Builder().withData(zone.getName(), RecordType.MX, Arrays.asList("10 mail10.example.com", "20 mail20.example.com", "30 mail30.example.com")).buildCreate());
+		actions.add(new ZoneUpdateAction.Builder().withData(zone.getName(), RecordType.MX, Arrays.asList("10 mail10.example.com", "20 mail20.example.com", "30 mail30.example.com")).buildCreateAction());
 
 		final ZoneChangeStatus status = driver.updateZone(zone, "add resources", actions);
 
@@ -81,7 +106,7 @@ public class IntegrationTest
 		{
 			if (!keepTypes.contains(resource.getRecordType()))
 			{
-				deleteActions.add(new ZoneUpdateAction.Builder().fromZoneResource(resource).buildDelete());
+				deleteActions.add(new ZoneUpdateAction.Builder().fromZoneResource(resource).buildDeleteAction());
 			}
 		}
 

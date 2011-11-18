@@ -32,7 +32,11 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 
 	private final List<String> resourceRecords;
 
-	private ZoneUpdateAction(String action, String name, RecordType type, int ttl, String setIdentifier, int weight, List<String> resourceRecords)
+	private final String aliasZoneId;
+
+	private final String aliasDnsName;
+
+	private ZoneUpdateAction(String action, String name, RecordType type, int ttl, String setIdentifier, int weight, List<String> resourceRecords, String aliasZoneId, String aliasDnsName)
 	{
 		this.action = action;
 		this.name = name;
@@ -40,6 +44,8 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 		this.ttl = ttl;
 		this.setIdentifier = setIdentifier;
 		this.weight = weight;
+		this.aliasZoneId = aliasZoneId;
+		this.aliasDnsName = aliasDnsName;
 
 		Collections.sort(resourceRecords);
 		this.resourceRecords = Collections.unmodifiableList(resourceRecords);
@@ -53,15 +59,22 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 		private List<String> resourceRecords = new ArrayList<String>();
 		private String setIdentifier = null;
 		private int weight = 0;
+		private String aliasZoneId;
+		private String aliasDnsName;
 
-		public ZoneUpdateAction buildCreate()
+		public ZoneUpdateAction buildCreateAction()
 		{
-			return new ZoneUpdateAction("CREATE", name, type, ttl, setIdentifier, weight, resourceRecords);
+			return build("CREATE");
 		}
 
-		public ZoneUpdateAction buildDelete()
+		public ZoneUpdateAction buildDeleteAction()
 		{
-			return new ZoneUpdateAction("DELETE", name, type, ttl, setIdentifier, weight, resourceRecords);
+			return build("DELETE");
+		}
+
+		private ZoneUpdateAction build(String action)
+		{
+			return new ZoneUpdateAction(action, name, type, ttl, setIdentifier, weight, resourceRecords, aliasZoneId, aliasDnsName);
 		}
 
 		/**
@@ -86,28 +99,50 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 			return this;
 		}
 
+		public Builder withData(String name, RecordType type)
+		{
+			this.name = name;
+			this.type = type;
+			return this;
+		}
+
 		public Builder withTtl(int ttl)
 		{
 			this.ttl = ttl;
 			return this;
 		}
 
-		public Builder withResourceRecords(List<String> resourceRecords)
+		public Builder addResourceRecords(List<String> resourceRecords)
 		{
 			this.resourceRecords.addAll(resourceRecords);
 			return this;
 		}
 
-		public Builder withResourceRecords(String... resourceRecords)
+		public Builder addResourceRecords(String... resourceRecords)
 		{
 			this.resourceRecords.addAll(Arrays.asList(resourceRecords));
 			return this;
 		}
 
-		public Builder withRoundRobinData(String setIdentifier, int weight)
+		public Builder addRoundRobinData(String setIdentifier, int weight)
 		{
 			this.setIdentifier = setIdentifier;
 			this.weight = weight;
+			return this;
+		}
+
+		/**
+		 * Add Alias resource record.
+		 *
+		 * <p>Details in the Route53 <a href="http://docs.amazonwebservices.com/Route53/latest/DeveloperGuide/index.html?CreatingAliasRRSets.html">documentation</a></a>
+		 * @param zoneId
+		 * @param dnsName
+		 * @return
+		 */
+		public Builder addAliasData(String zoneId, String dnsName)
+		{
+			this.aliasZoneId = zoneId;
+			this.aliasDnsName = dnsName;
 			return this;
 		}
 
@@ -117,8 +152,10 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 			type = resource.getRecordType();
 			ttl = resource.getTtl();
 			resourceRecords.addAll(resource.getResourceRecords());
-			setIdentifier = resource.getSetIdentifier();
-			weight = resource.getWeight();
+			setIdentifier = resource.getWrrSetIdentifier();
+			weight = resource.getWrrWeight();
+			aliasZoneId = resource.getAliasZoneId();
+			aliasDnsName = resource.getAliasDnsName();
 			return this;
 		}
 	}
@@ -135,7 +172,7 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 		mergedResources.addAll(action.resourceRecords);
 		mergedResources.addAll(resources);
 
-		return new ZoneUpdateAction(action.action, action.name, action.type, action.ttl, action.getSetIdentifier(), action.getWeight(), mergedResources);
+		return new ZoneUpdateAction(action.action, action.name, action.type, action.ttl, action.getSetIdentifier(), action.getWeight(), mergedResources, action.aliasZoneId, action.aliasDnsName);
 	}
 
 	void addChangeTag(XMLTag xml)
@@ -152,17 +189,26 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 			xml.addTag("Weight").addText(Integer.toString(weight));
 		}
 
-		xml.addTag("TTL").addText(String.valueOf(ttl));
-
-		xml.addTag("ResourceRecords");
-
-		for (String resource : resourceRecords)
+		if (StringUtils.isNotBlank(aliasZoneId))
 		{
-			String value = resource;
+			xml.addTag("AliasTarget");
+			xml.addTag("HostedZoneId").addText(aliasZoneId);
+			xml.addTag("DNSName").addText(aliasDnsName);
+		}
+		else
+		{
+			xml.addTag("TTL").addText(String.valueOf(ttl));
 
-			xml.addTag("ResourceRecord").addTag("Value").addText(value);
+			xml.addTag("ResourceRecords");
 
-			xml.gotoParent();
+			for (String resource : resourceRecords)
+			{
+				String value = resource;
+
+				xml.addTag("ResourceRecord").addTag("Value").addText(value);
+
+				xml.gotoParent();
+			}
 		}
 	}
 

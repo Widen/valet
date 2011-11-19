@@ -1,11 +1,16 @@
-package com.widen.valet.examples;
-
-import com.widen.valet.*;
-import com.widen.valet.util.NameQueryByRoute53APIService;
-import com.widen.valet.util.NameQueryService;
+package com.widen.examples;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.widen.valet.RecordType;
+import com.widen.valet.Route53Driver;
+import com.widen.valet.Zone;
+import com.widen.valet.ZoneChangeStatus;
+import com.widen.valet.ZoneResource;
+import com.widen.valet.ZoneUpdateAction;
+import com.widen.valet.util.NameQueryByRoute53APIService;
+import com.widen.valet.util.NameQueryService;
 
 /**
  * Simple example usage of using Valet API to create and update DNS zones in AWS Route53
@@ -25,7 +30,7 @@ public class ValetExample
 	{
 		String domain = "foodomain.com.";
 
-		String resource = String.format("www.%s", domain);
+		String resource = "www";
 
 		String resourceValue = "127.0.0.2";
 
@@ -44,7 +49,7 @@ public class ValetExample
 			//you should not modify zones that are not INSYNC
 			driver.waitForSync(createStatus);
 
-			zone = driver.zoneDetails(createStatus.zoneId);
+			zone = driver.zoneDetails(createStatus.getZoneId());
 		}
 
 		System.out.println("zone: " + zone);
@@ -60,11 +65,14 @@ public class ValetExample
 		if (lookup.exists)
 		{
 			//if the resource exists it must be deleted within the update transaction
-			ZoneUpdateAction delete = ZoneUpdateAction.deleteAction(resource, RecordType.A, 600, lookup.getFirstValue());
+
+			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(resource, RecordType.A, lookup.values).withTtl(lookup.ttl).buildDeleteAction();
+					//ZoneUpdateAction.deleteAction(resource, RecordType.A, 600, lookup.getFirstValue());
 			actions.add(delete);
 		}
 
-		ZoneUpdateAction create = ZoneUpdateAction.createAction(resource, RecordType.A, 600, resourceValue);
+		ZoneUpdateAction create = new ZoneUpdateAction.Builder().withData(resource, zone, RecordType.A, resourceValue).buildCreateAction();
+
 		actions.add(create);
 
 		//Update zone will throw a ValetException if Route53 rejects the transaction block

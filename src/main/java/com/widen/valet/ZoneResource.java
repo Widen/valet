@@ -1,28 +1,51 @@
 package com.widen.valet;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-import java.util.Collections;
-import java.util.List;
-
 public class ZoneResource
 {
-	public final String name;
+	private final String name;
 
-	public final RecordType recordType;
+	private final RecordType recordType;
 
-	public final int ttl;
+	private final int ttl;
 
-	public final List<String> resourceRecords;
+	private final String wrrSetIdentifier;
 
+	private final int wrrWeight;
+
+	private final String aliasZoneId;
+
+	private final String aliasDnsName;
+
+	private final List<String> resourceRecords;
+
+	/**
+	 * Internal usage for 'normal' resources
+	 */
 	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords)
+	{
+		this(name, recordType, ttl, resourceRecords, null, 0, null, null);
+	}
+
+	/**
+	 * Internal usage for 'weighted round-robin' and 'alias' resources
+	 */
+	ZoneResource(String name, RecordType recordType, int ttl, List<String> resourceRecords, String wrrSetIdentifier, int wrrWeight, String aliasZoneId, String aliasDnsName)
 	{
 		this.name = name;
 		this.recordType = recordType;
 		this.ttl = ttl;
 		this.resourceRecords = Collections.unmodifiableList(resourceRecords);
+		this.wrrSetIdentifier = wrrSetIdentifier;
+		this.wrrWeight = wrrWeight;
+		this.aliasZoneId = aliasZoneId;
+		this.aliasDnsName = aliasDnsName;
 	}
 
 	public String getFirstResource()
@@ -32,12 +55,12 @@ public class ZoneResource
 
 	public final ZoneUpdateAction createAction()
 	{
-		return ZoneUpdateAction.createAction(name, recordType, ttl, resourceRecords.toArray(new String[0]));
+		return new ZoneUpdateAction.Builder().withData(name, recordType, resourceRecords).withTtl(ttl).addRoundRobinData(wrrSetIdentifier, wrrWeight).addAliasData(aliasZoneId, aliasDnsName).buildCreateAction();
 	}
 
 	public final ZoneUpdateAction deleteAction()
 	{
-		return ZoneUpdateAction.deleteAction(name, recordType, ttl, resourceRecords.toArray(new String[0]));
+		return new ZoneUpdateAction.Builder().withData(name, recordType, resourceRecords).withTtl(ttl).addRoundRobinData(wrrSetIdentifier, wrrWeight).addAliasData(aliasZoneId, aliasDnsName).buildDeleteAction();
 	}
 
 	@Override
@@ -57,5 +80,45 @@ public class ZoneResource
 	public int hashCode()
 	{
 		return new HashCodeBuilder().append(name).append(recordType).append(ttl).append(resourceRecords).toHashCode();
+	}
+
+	public String getName()
+	{
+		return name;
+	}
+
+	public RecordType getRecordType()
+	{
+		return recordType;
+	}
+
+	public int getTtl()
+	{
+		return ttl;
+	}
+
+	public List<String> getResourceRecords()
+	{
+		return resourceRecords;
+	}
+
+	public String getWrrSetIdentifier()
+	{
+		return wrrSetIdentifier;
+	}
+
+	public int getWrrWeight()
+	{
+		return wrrWeight;
+	}
+
+	public String getAliasZoneId()
+	{
+		return aliasZoneId;
+	}
+
+	public String getAliasDnsName()
+	{
+		return aliasDnsName;
 	}
 }

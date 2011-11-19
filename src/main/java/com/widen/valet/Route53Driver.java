@@ -14,8 +14,6 @@
 
 package com.widen.valet;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,23 +26,23 @@ import java.util.UUID;
 import com.mycila.xmltool.XMLDoc;
 import com.mycila.xmltool.XMLDocumentException;
 import com.mycila.xmltool.XMLTag;
+import com.widen.valet.internal.DateUtil;
 import com.widen.valet.internal.Defense;
 import com.widen.valet.internal.Route53Pilot;
 import com.widen.valet.internal.Route53PilotImpl;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.client.HttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.util.TimeZone.getTimeZone;
-
 /**
- * Primary interface to interact with Route53.  See {@link com.widen.valet.examples.ValetExample} for usage example.
+ * Primary interface to interact with Route53.  See {@link com.widen.examples.ValetExample} for usage example.
  */
 public class Route53Driver
 {
 	private Logger log = LoggerFactory.getLogger(Route53Driver.class);
 
-	private static final String ROUTE53_XML_NAMESPACE = "https://route53.amazonaws.com/doc/2010-10-01/";
+	private static final String ROUTE53_XML_NAMESPACE = "https://route53.amazonaws.com/doc/2011-05-05/";
 
 	private final Route53Pilot pilot;
 
@@ -56,6 +54,17 @@ public class Route53Driver
 	public Route53Driver(String awsUserKey, String awsSecretKey)
 	{
 		this.pilot = new Route53PilotImpl(awsUserKey, awsSecretKey);
+	}
+
+	/**
+	 * Construct driver using AWS user/secret keys with custom {@link HttpClient} instance.
+	 * @param awsUserKey
+	 * @param awsSecretKey
+	 * @param httpClient
+	 */
+	public Route53Driver(String awsUserKey, String awsSecretKey, HttpClient httpClient)
+	{
+		this.pilot = new Route53PilotImpl(awsUserKey, awsSecretKey, httpClient);
 	}
 
 	/**
@@ -95,6 +104,13 @@ public class Route53Driver
 		if (updateActions.isEmpty())
 		{
 			return new ZoneChangeStatus(zone.getExistentZoneId(), "no-change-submitted", ZoneChangeStatus.Status.INSYNC, new Date());
+		}
+
+		System.err.println("list size: " + updateActions.size());
+
+		if (updateActions.size() > 100)
+		{
+			throw new ValetException("Route53 will only process 100 actions per request. Use com.widen.util.ListUtil:split() to make multiple requests.");
 		}
 
 		String commentXml = StringUtils.defaultIfEmpty(comment, String.format("Modify %s records.", updateActions.size()));
@@ -139,33 +155,32 @@ public class Route53Driver
 	 */
 	public ZoneChangeStatus queryChangeStatus(ZoneChangeStatus oldStatus)
 	{
-		String response = pilot.executeChangeInfoGet(oldStatus.changeId);
+		String response = pilot.executeChangeInfoGet(oldStatus.getChangeId());
 
 		XMLTag xml = XMLDoc.from(response, true);
 
-		return parseChangeResourceRecordSetsResponse(oldStatus.zoneId, xml);
+		return parseChangeResourceRecordSetsResponse(oldStatus.getZoneId(), xml);
 	}
 
 	private ZoneChangeStatus parseChangeResourceRecordSetsResponse(String zoneId, XMLTag xml)
 	{
-		XMLTag changeInfo = xml.gotoChild("ChangeInfo");
+		XMLTag changeInfo;
+
+		try
+		{
+			changeInfo = xml.gotoChild("ChangeInfo");
+		}
+		catch (XMLDocumentException xmlde)
+		{
+			// No 'ChangeInfo' element
+			return new ZoneChangeStatus(zoneId, null, null, null);
+		}
 
 		String changeId = StringUtils.substringAfter(changeInfo.getText("Id"), "/change/");
 
 		ZoneChangeStatus.Status status = ZoneChangeStatus.Status.valueOf(changeInfo.getText("Status"));
 
-		Date date = null;
-
-		try
-		{
-			SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-			format.setTimeZone(getTimeZone("Zulu"));
-			date = format.parse(changeInfo.getText("SubmittedAt"));
-		}
-		catch (ParseException e)
-		{
-			throw new RuntimeException(e);
-		}
+		Date date = DateUtil.fromZulu(changeInfo.getText("SubmittedAt"));
 
 		return new ZoneChangeStatus(zoneId, changeId, status, date);
 	}
@@ -197,7 +212,7 @@ public class Route53Driver
 			{
 				inSync = true;
 
-				log.debug("Zone ID {} is now INSYNC", current.zoneId);
+				log.debug("Zone ID {} is now INSYNC", current.getZoneId());
 			}
 			else
 			{
@@ -234,6 +249,13 @@ public class Route53Driver
 
 			XMLTag xml = XMLDoc.from(result, true);
 
+			log.trace("List Zone Records:\n{}", xml);
+
+			if (xml.hasTag("Error"))
+			{
+				throw parseErrorResponse(xml);
+			}
+
 			if (xml.getText("//IsTruncated").equals("false"))
 			{
 				readMore = false;
@@ -245,18 +267,38 @@ public class Route53Driver
 			{
 				String name = record.getText("Name");
 				String type = record.getText("Type");
-				String ttl = record.getText("TTL");
 
-				List<String> values = new ArrayList<String>();
-
-				for (XMLTag resource : record.getChilds("ResourceRecords/ResourceRecord"))
+				String weight = null;
+				String setIdentifier = null;
+				if (record.hasTag("SetIdentifier"))
 				{
-					values.add(resource.getText("Value"));
+					setIdentifier = record.getText("SetIdentifier");
+					weight = record.getText("Weight");
 				}
 
-				Collections.sort(values);
+				String ttl = null;
+				String aliasZoneId = null;
+				String aliasDnsName = null;
+				List<String> values = new ArrayList<String>();
 
-				zoneResources.add(new ZoneResource(name, RecordType.valueOf(type), Integer.parseInt(ttl), values));
+				if (record.hasTag("AliasTarget"))
+				{
+					aliasZoneId = record.getText("AliasTarget/HostedZoneId");
+					aliasDnsName = record.getText("AliasTarget/DNSName");
+				}
+				else
+				{
+					ttl = record.getText("TTL");
+
+					for (XMLTag resource : record.getChilds("ResourceRecords/ResourceRecord"))
+					{
+						values.add(resource.getText("Value"));
+					}
+
+					Collections.sort(values);
+				}
+
+				zoneResources.add((new ZoneResource(name, RecordType.valueOf(type), parseIntWithDefault(ttl, 0), values, setIdentifier, parseIntWithDefault(weight, 0), aliasZoneId, aliasDnsName)));
 
 				lastName = name;
 			}
@@ -269,6 +311,16 @@ public class Route53Driver
 		list.addAll(zoneResources);
 
 		return list;
+	}
+
+	private int parseIntWithDefault(String s, int defaultValue)
+	{
+		if (StringUtils.isEmpty(s))
+		{
+			return defaultValue;
+		}
+
+		return Integer.parseInt(s);
 	}
 
 	/**
@@ -324,7 +376,7 @@ public class Route53Driver
 
 		for (Zone zone : zones)
 		{
-			if (StringUtils.equalsIgnoreCase(zone.name, domain))
+			if (StringUtils.equalsIgnoreCase(zone.getName(), domain))
 			{
 				return zone;
 			}
@@ -426,13 +478,34 @@ public class Route53Driver
 		return parseChangeResourceRecordSetsResponse(zone.getExistentZoneId(), xml);
 	}
 
+	/**
+	 * Delete a Route53 hosted zone. Route53 requires that all resource records (except NS and SOA) be already be removed from the zone.
+	 */
+	public ZoneChangeStatus deleteZone(final Zone zone, final String comment)
+	{
+		log.trace("Delete ZoneId {} ({})", zone.getZoneId(), comment);
+
+		final String result = pilot.executeHostedZoneDelete(zone.getZoneId());
+
+		final XMLTag xml = XMLDoc.from(result, true);
+
+		log.debug("Delete Zone Response:\n{}", xml);
+
+		if (xml.hasTag("Error"))
+		{
+			throw parseErrorResponse(xml);
+		}
+
+		return parseChangeResourceRecordSetsResponse(zone.getZoneId(), xml);
+	}
+
 	private void ensureDomainNameNotAlreadyCreated(String domainName)
 	{
 		List<Zone> zones = listZones();
 
 		for (Zone zone : zones)
 		{
-			if (zone.name.equals(domainName))
+			if (zone.getName().equals(domainName))
 			{
 				throw new IllegalArgumentException("Domain name '" + domainName + "' is already hosted by Route53.");
 			}
@@ -441,9 +514,6 @@ public class Route53Driver
 
 	/**
 	 * Query for existence of named domain in Zones available to AWS Access Key
-	 *
-	 * @param domainName
-	 * @return
 	 */
 	public boolean zoneDomainExists(final String domainName)
 	{
@@ -453,7 +523,7 @@ public class Route53Driver
 
 		for (Zone zone : zones)
 		{
-			if (StringUtils.equalsIgnoreCase(domainName, zone.name))
+			if (StringUtils.equalsIgnoreCase(domainName, zone.getName()))
 			{
 				return true;
 			}

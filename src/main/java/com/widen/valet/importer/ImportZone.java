@@ -14,7 +14,21 @@
 
 package com.widen.valet.importer;
 
-import com.widen.valet.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Properties;
+
+import com.widen.valet.RecordType;
+import com.widen.valet.Route53Driver;
+import com.widen.valet.Zone;
+import com.widen.valet.ZoneChangeStatus;
+import com.widen.valet.ZoneResource;
+import com.widen.valet.ZoneUpdateAction;
 import com.widen.valet.util.ListUtil;
 import com.widen.valet.util.NameQueryByRoute53APIService;
 import com.widen.valet.util.NameQueryService;
@@ -23,11 +37,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
 
 /**
  * Smart sync zone from file.
@@ -56,6 +65,8 @@ public class ImportZone
 	private final int defaultTTL;
 
 	private final boolean dryRun;
+
+	private final boolean cleanZone;
 
 	private final String nameServer;
 
@@ -86,6 +97,7 @@ public class ImportZone
 		defaultTTL = Integer.parseInt(getAndVerifyProperty("widen.valet.default-ttl", properties));
 		dryRun = Boolean.parseBoolean(getAndVerifyProperty("widen.valet.dry-run", properties));
 		nameServer = getAndVerifyProperty("widen.valet.aws-name-server", properties);
+		cleanZone = Boolean.parseBoolean(getAndVerifyProperty("widen.valet.clean-zone-by-deleteing-all-records", properties));
 	}
 
 	private String getAndVerifyProperty(String key, Properties properties)
@@ -105,6 +117,27 @@ public class ImportZone
 		Route53Driver driver = new Route53Driver(awsAccessKey, awsPrivateKey);
 
 		Zone zone = driver.zoneDetails(route53ZoneId);
+
+		if (cleanZone)
+		{
+			List<ZoneUpdateAction> deletes = new ArrayList<ZoneUpdateAction>();
+
+			for (ZoneResource resource : driver.listZoneRecords(zone))
+			{
+				if (!Arrays.asList(RecordType.NS, RecordType.SOA).contains(resource.getRecordType()))
+				{
+					ZoneUpdateAction zua = new ZoneUpdateAction.Builder().fromZoneResource(resource).buildDeleteAction();
+					deletes.add(zua);
+				}
+			}
+
+			for (List<ZoneUpdateAction> deleteChunk : ListUtil.split(deletes, 100))
+			{
+				ZoneChangeStatus status = driver.updateZone(zone, "Clean all zone records before re-import", deleteChunk);
+
+				driver.waitForSync(status);
+			}
+		}
 
 		if ("route53rrs".equals(nameServer))
 		{
@@ -165,7 +198,7 @@ public class ImportZone
 			{
 				log.debug("processing line: {}", l);
 
-				List<ZoneUpdateAction> actionForRecord = parseRecord(l, zone.name, actions);
+				List<ZoneUpdateAction> actionForRecord = parseRecord(l, zone.getName(), actions);
 
 				actions.addAll(actionForRecord);
 			}
@@ -199,7 +232,7 @@ public class ImportZone
 
 		if (!lookupRecord.exists)
 		{
-			ZoneUpdateAction action = ZoneUpdateAction.createAction(name, type, defaultTTL, value);
+			ZoneUpdateAction action = new ZoneUpdateAction.Builder().withData(name, type, Arrays.asList(value)).withTtl(defaultTTL).buildCreateAction();
 
 			return Arrays.asList(mergeAction(action, existing));
 		}
@@ -211,9 +244,9 @@ public class ImportZone
 		}
 		else
 		{
-			ZoneUpdateAction delete = ZoneUpdateAction.deleteAction(name, type, lookupRecord.ttl, lookupRecord.values.toArray(new String[] {}));
+			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(name, type, lookupRecord.values).withTtl(lookupRecord.ttl).buildDeleteAction();
 
-			ZoneUpdateAction create = ZoneUpdateAction.createAction(name, type, defaultTTL, value);
+			ZoneUpdateAction create = new ZoneUpdateAction.Builder().withData(name, type, Arrays.asList(value)).withTtl(defaultTTL).buildCreateAction();
 
 			return Arrays.asList(mergeAction(delete, existing), mergeAction(create, existing));
 		}
@@ -225,7 +258,7 @@ public class ImportZone
 
 		if (itemToMerge >= 0)
 		{
-			List<String> resources = existing.get(itemToMerge).resourceRecord;
+			List<String> resources = existing.get(itemToMerge).getResourceRecords();
 
 			existing.remove(itemToMerge);
 

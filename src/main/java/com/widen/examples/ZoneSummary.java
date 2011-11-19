@@ -1,4 +1,10 @@
-package com.widen.valet.examples;
+package com.widen.examples;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 import com.widen.valet.RecordType;
 import com.widen.valet.Route53Driver;
@@ -7,26 +13,31 @@ import com.widen.valet.util.NameQueryByRoute53APIService;
 import com.widen.valet.util.NameQueryService;
 import org.apache.commons.lang.StringUtils;
 
-import java.util.*;
-
+/**
+ * Generate short summary of all hosted zones for a Route53 account.
+ *
+ * Output includes apex-A record, www record, soa records, and mx records suitable for pasting into a spreadsheet.
+ */
 public class ZoneSummary
 {
-	private static final String AWS_ACCESS_KEY = "";
-
-	private static final String AWS_SECRET_KEY = "";
-
 	private Route53Driver driver;
 
 	private List<ZoneSummaryData> out = new ArrayList<ZoneSummaryData>();
 
+	/**
+	 * @param args
+	 * 		args[0] = AWS Access Key, args[1] = AWS Secret Key
+	 */
 	public static void main(String[] args)
 	{
-		new ZoneSummary().run();
+		ZoneSummary zoneSummary = new ZoneSummary(args[0], args[1]);
+
+		zoneSummary.run();
 	}
 
-	public ZoneSummary()
+	public ZoneSummary(String awsAccessKey, String awsSecretKey)
 	{
-		driver = new Route53Driver(AWS_ACCESS_KEY, AWS_SECRET_KEY);
+		driver = new Route53Driver(awsAccessKey, awsSecretKey);
 	}
 
 	private void run()
@@ -37,7 +48,7 @@ public class ZoneSummary
 
 		for (Zone z : zones)
 		{
-			System.out.println(z.name + "..");
+			System.out.println(z.getName() + "..");
 
 			Zone zoneDetail = driver.zoneDetails(z);
 
@@ -55,22 +66,22 @@ public class ZoneSummary
 
 		ZoneSummaryData data = new ZoneSummaryData();
 
-		data.zoneId = z.zoneId;
+		data.zoneId = z.getZoneId();
 
-		data.domain = z.name;
+		data.domain = z.getName();
 
-		data.apexRecord = queryService.lookup(z.name, RecordType.A).getFirstValue();
+		data.apexRecord = queryService.lookup(z.getName(), RecordType.A).getFirstValue();
 
-		data.wwwRecord = queryService.lookup("www." + z.name, RecordType.A).getFirstValue();
+		data.wwwRecord = queryService.lookup("www." + z.getName(), RecordType.A).getFirstValue();
 
 		if (data.wwwRecord.isEmpty())
 		{
-			data.wwwRecord = queryService.lookup("www." + z.name, RecordType.CNAME).getFirstValue();
+			data.wwwRecord = queryService.lookup("www." + z.getName(), RecordType.CNAME).getFirstValue();
 		}
 
-		data.nsRecords.addAll(z.nameServers);
+		data.nsRecords.addAll(z.getNameServers());
 
-		data.mxRecords = queryService.lookup(z.name, RecordType.MX).values;
+		data.mxRecords = queryService.lookup(z.getName(), RecordType.MX).values;
 
 		return data;
 	}

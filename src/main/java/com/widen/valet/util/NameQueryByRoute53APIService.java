@@ -1,15 +1,15 @@
 package com.widen.valet.util;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.widen.valet.RecordType;
 import com.widen.valet.Route53Driver;
 import com.widen.valet.Zone;
 import com.widen.valet.ZoneResource;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class NameQueryByRoute53APIService implements NameQueryService
 {
@@ -30,7 +30,7 @@ public class NameQueryByRoute53APIService implements NameQueryService
 
 		for (ZoneResource resource : resources)
 		{
-			zoneMap.put(new RecordKey(resource.name, resource.recordType), resource);
+			zoneMap.put(new RecordKey(resource.getName(), resource.getRecordType()), resource);
 		}
 	}
 
@@ -44,7 +44,7 @@ public class NameQueryByRoute53APIService implements NameQueryService
 			return LookupRecord.NON_EXISTENT_RECORD;
 		}
 
-		return new LookupRecord(name, resource.resourceRecords, resource.ttl, true);
+		return new LookupRecord(name, resource.getResourceRecords(), resource.getTtl(), true);
 	}
 
 	private final class RecordKey

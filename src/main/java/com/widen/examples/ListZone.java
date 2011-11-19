@@ -1,4 +1,4 @@
-package com.widen.valet.examples;
+package com.widen.examples;
 
 import com.widen.valet.Route53Driver;
 import com.widen.valet.Zone;

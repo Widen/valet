@@ -30,13 +30,13 @@ public class ValetTest
 
 		assertEquals("Z18VDLRK3QY0Z4", zone.getExistentZoneId());
 
-		assertEquals("6a1dd118-8019-478b-9d06-6ae7158d82e1", zone.callerReference);
+		assertEquals("6a1dd118-8019-478b-9d06-6ae7158d82e1", zone.getCallerReference());
 
-		assertEquals("uriahacarpenter.com.", zone.name);
+		assertEquals("uriahacarpenter.com.", zone.getName());
 
-		assertEquals("Create zone uriahacarpenter.com", zone.comment);
+		assertEquals("Create zone uriahacarpenter.com", zone.getComment());
 
-		assertEquals(Arrays.asList("ns-1333.awsdns-38.org", "ns-1940.awsdns-50.co.uk", "ns-240.awsdns-30.com", "ns-604.awsdns-11.net"), zone.nameServers);
+		assertEquals(Arrays.asList("ns-1333.awsdns-38.org", "ns-1940.awsdns-50.co.uk", "ns-240.awsdns-30.com", "ns-604.awsdns-11.net"), zone.getNameServers());
 	}
 
 	@Test
@@ -46,9 +46,9 @@ public class ValetTest
 
 		assertEquals(zones.size(), 2);
 
-		assertEquals("Z18VDLRK3QY0Z4", zones.get(0).zoneId);
+		assertEquals("Z18VDLRK3QY0Z4", zones.get(0).getZoneId());
 
-		assertEquals("ZNI0MR764YEWF", zones.get(1).zoneId);
+		assertEquals("ZNI0MR764YEWF", zones.get(1).getZoneId());
 	}
 
 	@Test
@@ -56,17 +56,17 @@ public class ValetTest
 	{
 		List<ZoneUpdateAction> updates = new ArrayList<ZoneUpdateAction>();
 
-		updates.add(ZoneUpdateAction.deleteAction("uriahacarpenter.com", RecordType.A, 600, "127.0.0.1"));
-		updates.add(ZoneUpdateAction.createAction("uriahacarpenter.com", RecordType.A, 600, "127.0.0.1"));
+		updates.add(new ZoneUpdateAction.Builder().withData("uriahacarpenter.com", RecordType.A, Arrays.asList("127.0.0.1")).buildDeleteAction());
+		updates.add(new ZoneUpdateAction.Builder().withData("uriahacarpenter.com", RecordType.A, Arrays.asList("127.0.0.1")).buildCreateAction());
 
 		Zone zone = new Zone("Z1234", "uriahcarpenter.com.", "", "", Collections.<String>emptyList());
 
 		ZoneChangeStatus status = new Route53Driver(getPilot()).updateZone(zone, "update comment", updates);
 
-		assertEquals("Z1234", status.zoneId);
-		assertEquals("C34NBUXNVUM7LE", status.changeId);
-		assertEquals("PENDING", status.status.toString());
-		assertEquals("Wed Feb 23 08:35:42 CST 2011", status.submitDate.toString());
+		assertEquals("Z1234", status.getZoneId());
+		assertEquals("C34NBUXNVUM7LE", status.getChangeId());
+		assertEquals("PENDING", status.getStatus().toString());
+		assertEquals("Wed Feb 23 08:35:42 CST 2011", status.getSubmitDate().toString());
 	}
 
 	@Test
@@ -76,10 +76,10 @@ public class ValetTest
 
 		ZoneChangeStatus newStatus = new Route53Driver(getPilot()).queryChangeStatus(oldStatus);
 
-		assertEquals("C34NBUXNVUM7LE", newStatus.changeId);
-		assertEquals("INSYNC", newStatus.status.toString());
-		assertEquals("Wed Feb 23 08:35:42 CST 2011", newStatus.submitDate.toString());
-		assertEquals("C34NBUXNVUM7LE", newStatus.zoneId);
+		assertEquals("C34NBUXNVUM7LE", newStatus.getChangeId());
+		assertEquals("INSYNC", newStatus.getStatus().toString());
+		assertEquals("Wed Feb 23 08:35:42 CST 2011", newStatus.getSubmitDate().toString());
+		assertEquals("C34NBUXNVUM7LE", newStatus.getZoneId());
 		assertEquals(true, newStatus.isInSync());
 	}
 

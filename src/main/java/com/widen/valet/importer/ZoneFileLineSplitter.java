@@ -1,9 +1,9 @@
 package com.widen.valet.importer;
 
-import org.apache.commons.lang.StringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
 
 public class ZoneFileLineSplitter
 {
@@ -12,6 +12,7 @@ public class ZoneFileLineSplitter
 		System.out.println(splitLine("@        A       10.0.0.0"));
 		System.out.println(splitLine("foo   MX    10  mail-server.foo.com."));
 		System.out.println(splitLine("foo   TXT    ( \"Windows DNS puts parens around txt values\""));
+		System.out.println(splitLine("      A  10.0.0.1"));
 	}
 
 	public static List<String> splitLine(String l)
@@ -46,10 +47,22 @@ public class ZoneFileLineSplitter
 			}
 		}
 
+		String chunk1 = cleanup(builders[0]);
+		String chunk2 = cleanup(builders[1]);
+		String chunk3 = cleanup(builders[2]);
+
+		//'apex zone' record is blank, but when parsing it's the last chunk that's blank
+//		if (StringUtils.isBlank(chunk3))
+//		{
+//			chunk3 = chunk2;
+//			chunk2 = chunk1;
+//			chunk1 = "";
+//		}
+
 		List<String> list = new ArrayList<String>();
-		list.add(cleanup(builders[0]));
-		list.add(cleanup(builders[1]));
-		list.add(cleanup(builders[2]));
+		list.add(chunk1);
+		list.add(chunk2);
+		list.add(chunk3);
 
 		return list;
 	}

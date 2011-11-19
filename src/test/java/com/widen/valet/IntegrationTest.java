@@ -14,6 +14,8 @@ public class IntegrationTest
 {
 	private final Logger log = LoggerFactory.getLogger(IntegrationTest.class);
 
+	private Properties testProperteis;
+
 	private Route53Driver driver;
 
 	public static void main(String[] args)
@@ -23,7 +25,9 @@ public class IntegrationTest
 
 	private void runTest()
 	{
-		setupDriver();
+		loadProperties();
+
+		driver = new Route53Driver(testProperteis.getProperty("aws-access-key"), testProperteis.getProperty("aws-secret-key"));
 
 		final Zone zone = createZone(String.format("valet-test-zone-%s.net.", System.currentTimeMillis()));
 
@@ -43,7 +47,7 @@ public class IntegrationTest
 
 	private void runDeleteZone(String domain)
 	{
-		setupDriver();
+		loadProperties();
 
 		deleteZone(driver.zoneDetailsForDomain(domain));
 	}
@@ -52,7 +56,7 @@ public class IntegrationTest
 	{
 		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
 
-		actions.add(new ZoneUpdateAction.Builder().withData(zone.getName(), RecordType.A).addAliasData("Z123456789", "some-load-balancer.us-east-1.elb.amazonaws.com.").buildCreateAction());
+		actions.add(new ZoneUpdateAction.Builder().withData(zone.getName(), RecordType.A).addAliasData(testProperteis.getProperty("elb-hosted-zone-id"), testProperteis.getProperty("elb-dns-name")).buildCreateAction());
 
 		final ZoneChangeStatus status = driver.updateZone(zone, "add alias resources", actions);
 
@@ -96,6 +100,8 @@ public class IntegrationTest
 
 	private void deleteZone(Zone zone)
 	{
+		log.info("Deleting integration test zone {} ({})", zone.getName(), zone.getZoneId());
+
 		List<RecordType> keepTypes = Arrays.asList(RecordType.SOA, RecordType.NS);
 
 		final List<ZoneResource> resources = driver.listZoneRecords(zone);
@@ -119,20 +125,18 @@ public class IntegrationTest
 		driver.waitForSync(status);
 	}
 
-	private void setupDriver()
+	private void loadProperties()
 	{
-		final Properties properties = new Properties();
+		testProperteis = new Properties();
 
 		try
 		{
-			properties.load(getClass().getResourceAsStream("IntegrationTest.properties"));
+			testProperteis.load(getClass().getResourceAsStream("IntegrationTest.properties"));
 		}
 		catch (IOException e)
 		{
 			throw new RuntimeException(e);
 		}
-
-		driver = new Route53Driver(properties.getProperty("aws-access-key"), properties.getProperty("aws-secret-key"));
 	}
 
 }

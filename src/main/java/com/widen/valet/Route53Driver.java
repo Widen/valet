@@ -478,8 +478,13 @@ public class Route53Driver
 		return parseChangeResourceRecordSetsResponse(zone.getExistentZoneId(), xml);
 	}
 
+	/**
+	 * Delete a Route53 hosted zone. Route53 requires that all resource records (except NS and SOA) be already be removed from the zone.
+	 */
 	public ZoneChangeStatus deleteZone(final Zone zone, final String comment)
 	{
+		log.trace("Delete ZoneId {} ({})", zone.getZoneId(), comment);
+
 		final String result = pilot.executeHostedZoneDelete(zone.getZoneId());
 
 		final XMLTag xml = XMLDoc.from(result, true);
@@ -509,9 +514,6 @@ public class Route53Driver
 
 	/**
 	 * Query for existence of named domain in Zones available to AWS Access Key
-	 *
-	 * @param domainName
-	 * @return
 	 */
 	public boolean zoneDomainExists(final String domainName)
 	{

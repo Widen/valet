@@ -57,7 +57,7 @@ public class ValetExample
 		//Simple query service to search for existing resources within the zone
 		NameQueryService queryService = new NameQueryByRoute53APIService(driver, zone);
 
-		NameQueryService.LookupRecord lookup = queryService.lookup(resource, RecordType.A);
+		NameQueryService.LookupRecord lookup = queryService.lookup(resource + "." + domain, RecordType.A);
 
 		//Holds the commands to run within the update transaction
 		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
@@ -66,7 +66,7 @@ public class ValetExample
 		{
 			//if the resource exists it must be deleted within the update transaction
 
-			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(resource, RecordType.A, lookup.values).withTtl(lookup.ttl).buildDeleteAction();
+			ZoneUpdateAction delete = new ZoneUpdateAction.Builder().withData(resource + "." + domain, RecordType.A, lookup.values).withTtl(lookup.ttl).buildDeleteAction();
 					//ZoneUpdateAction.deleteAction(resource, RecordType.A, 600, lookup.getFirstValue());
 			actions.add(delete);
 		}

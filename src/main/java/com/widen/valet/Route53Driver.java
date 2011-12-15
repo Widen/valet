@@ -106,7 +106,7 @@ public class Route53Driver
 			return new ZoneChangeStatus(zone.getExistentZoneId(), "no-change-submitted", ZoneChangeStatus.Status.INSYNC, new Date());
 		}
 
-		System.err.println("list size: " + updateActions.size());
+		log.trace("list size: " + updateActions.size());
 
 		if (updateActions.size() > 100)
 		{

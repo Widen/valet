@@ -1,6 +1,7 @@
 Valet is a simple Java API to interact AWS's [Route53](http://aws.amazon.com/route53/) DNS service.
 
-The AWS Java SDK does not currently support Route53; this simple binding may help if you want to use Java to modify Route53 zone data.
+The [AWS Java SDK](http://aws.amazon.com/releasenotes/Java/4090905529949639) added Route53 in December 2011.
+This simple binding predates the native SDK implementation and includes several tools that may be useful.
 
 View [ValetExample](/Widen/valet/blob/master/src/main/java/com/widen/examples/ValetExample.java) for typical usage of Valet API.
 
@@ -15,11 +16,13 @@ Available via Maven:
       server: http://widen.artifactoryonline.com/widen/libs-widen-public
        group: widen
     artifact: valet
-     version: 0.2
+     version: 0.3
 
 Or browse the repo directly at [https://widen.artifactoryonline.com/widen/libs-widen-public](https://widen.artifactoryonline.com/widen/libs-widen-public/widen/valet/)
 
 Change Log:
+
+	0.3 - Remove extraneous system error debug message
 
     0.2 - Weighted Round Robin support
     	  Alias Resource Record support

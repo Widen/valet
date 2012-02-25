@@ -106,8 +106,6 @@ public class Route53Driver
 			return new ZoneChangeStatus(zone.getExistentZoneId(), "no-change-submitted", ZoneChangeStatus.Status.INSYNC, new Date());
 		}
 
-		log.trace("list size: " + updateActions.size());
-
 		if (updateActions.size() > 100)
 		{
 			throw new ValetException("Route53 will only process 100 actions per request. Use com.widen.util.ListUtil:split() to make multiple requests.");

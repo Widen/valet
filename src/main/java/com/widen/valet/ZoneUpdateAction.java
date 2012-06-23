@@ -78,7 +78,7 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 		}
 
 		/**
-		 * Create zone resource using 'simple' name -- without the zone name appended
+		 * Create zone resource using 'simple' name (e.g. 'www') -- without the zone name pre-appended
 		 *
 		 * @param resourceName
 		 * @param zone
@@ -87,9 +87,16 @@ public class ZoneUpdateAction implements Comparable<ZoneUpdateAction>
 		 * @return
 		 */
 		public Builder withData(String resourceName, Zone zone, RecordType type, String... resourceValues)
-		{
-			return withData(String.format("%s.%s", resourceName, zone.getName()), type, Arrays.asList(resourceValues));
-		}
+        {
+            String hostName = "";
+
+            if (resourceName != null && !resourceName.equals(""))
+            {
+                hostName = resourceName + ".";
+            }
+
+            return withData(String.format("%s%s", hostName, zone.getName()), type, Arrays.asList(resourceValues));
+        }
 
 		public Builder withData(String name, RecordType type, Collection<String> resourceValues)
 		{

@@ -32,20 +32,34 @@ public class IntegrationTest
 		final Zone zone = createZone(String.format("valet-test-zone-%s.net.", System.currentTimeMillis()));
 
 		try
-		{
-			addResources(zone);
+        {
+            addTxtResources(zone);
 
-			addRoundRobinResources(zone);
+            addResources(zone);
 
-			addAliasResources(zone);
-		}
+            addRoundRobinResources(zone);
+
+            addAliasResources(zone);
+        }
 		finally
 		{
 			deleteZone(zone);
 		}
 	}
 
-	private void runDeleteZone(String domain)
+    private void addTxtResources(Zone zone)
+    {
+        List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
+
+        actions.add(new ZoneUpdateAction.Builder().withData("foohost", zone, RecordType.TXT, "\"foo text\"").buildCreateAction());
+        actions.add(new ZoneUpdateAction.Builder().withData("", zone, RecordType.TXT, "\"bar text\"").buildCreateAction());
+
+        final ZoneChangeStatus status = driver.updateZone(zone, "add txt resources", actions);
+
+        driver.waitForSync(status);
+    }
+
+    private void runDeleteZone(String domain)
 	{
 		loadProperties();
 

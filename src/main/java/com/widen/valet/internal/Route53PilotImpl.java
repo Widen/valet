@@ -2,9 +2,12 @@ package com.widen.valet.internal;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.security.SignatureException;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -109,7 +112,7 @@ public class Route53PilotImpl implements Route53Pilot
 		return execute(get);
 	}
 
-	public String executeResourceRecordSetGet(String zone, String query)
+	public String executeResourceRecordSetGet(String zone, Map<String, String> query)
 	{
 		HttpGet get = new HttpGet(recordSetUri(zone, query));
 
@@ -118,7 +121,7 @@ public class Route53PilotImpl implements Route53Pilot
 
 	public String executeResourceRecordSetsPost(String zone, String payload)
 	{
-		HttpPost post = new HttpPost(recordSetUri(zone, ""));
+		HttpPost post = new HttpPost(recordSetUri(zone, Collections.EMPTY_MAP));
 
 		try
 		{
@@ -132,17 +135,34 @@ public class Route53PilotImpl implements Route53Pilot
 		return execute(post);
 	}
 
-	private String recordSetUri(String zone, String query)
+	private String recordSetUri(String zone, Map<String, String> query)
 	{
-		String q = "";
+		StringBuilder q = new StringBuilder();
 
-		if (StringUtils.isNotBlank(query))
-		{
-			q = "?" + query;
-		}
+		if (query != null && !query.isEmpty())
+        {
+            q.append("?");
+
+            for (Map.Entry<String, String> entry : query.entrySet())
+            {
+                q.append(String.format("%s=%s", encodeQueryParam(entry.getKey()), encodeQueryParam(entry.getValue())));
+            }
+        }
 
 		return String.format("%s/%s/rrset%s", HOSTED_ZONE_ENDPOINT, zone, q);
 	}
+
+    private String encodeQueryParam(String in)
+    {
+        try
+        {
+            return URLEncoder.encode(in, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            throw new RuntimeException("UTF-8 encoding not supported");
+        }
+    }
 
 	private String execute(HttpRequestBase request)
 	{

@@ -1,12 +1,16 @@
 package com.widen.valet;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
+import com.widen.valet.internal.Defense;
+import com.widen.valet.util.ListUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,24 +18,30 @@ public class IntegrationTest
 {
 	private final Logger log = LoggerFactory.getLogger(IntegrationTest.class);
 
-	private Properties testProperteis;
+	private Properties testProperties;
 
 	private Route53Driver driver;
 
-	public static void main(String[] args)
-	{
-		new IntegrationTest().runTest();
+	public static void main(String[] args) throws IOException
+    {
+		//new IntegrationTest().runTest();
+
+        new IntegrationTest().runDeleteZone("valet-test-zone-1345827982884.net.");
 	}
 
-	private void runTest()
-	{
-		loadProperties();
+    private void runDeleteZone(String domain) throws IOException
+    {
+        setupForTest();
+        deleteZone(driver.zoneDetailsForDomain(domain));
+    }
 
-		driver = new Route53Driver(testProperteis.getProperty("aws-access-key"), testProperteis.getProperty("aws-secret-key"));
+	private void runTest() throws IOException
+    {
+		setupForTest();
 
 		final Zone zone = createZone(String.format("valet-test-zone-%s.net.", System.currentTimeMillis()));
 
-		try
+        try
         {
             addTxtResources(zone);
 
@@ -39,13 +49,54 @@ public class IntegrationTest
 
             addRoundRobinResources(zone);
 
-            addAliasResources(zone);
+            addMassNumberOfRecords(zone);
+
+            //addAliasResources(zone);
+
+            readZone(zone);
         }
-		finally
-		{
-			deleteZone(zone);
-		}
+        catch (Exception e)
+        {
+            log.error("Error running integration test", e);
+        }
+        finally
+        {
+            deleteZone(zone);
+        }
 	}
+
+    private void addMassNumberOfRecords(Zone zone)
+    {
+        int zonesToCreate = 501;
+
+        List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
+
+        for (int i = 0; i < zonesToCreate; i++)
+        {
+            actions.add(new ZoneUpdateAction.Builder().withData("hostname-" + i, zone, RecordType.A, "127.0.0.1").buildCreateAction());
+        }
+
+        List<List<ZoneUpdateAction>> split = ListUtil.split(actions, 100);
+
+        for (List<ZoneUpdateAction> list : split)
+        {
+            final ZoneChangeStatus status = driver.updateZone(zone, "add a mass number of resources", list);
+
+            driver.waitForSync(status);
+        }
+    }
+
+    private void readZone(Zone zone)
+    {
+        List<ZoneResource> resources = driver.listZoneRecords(zone);
+
+        log.info("Listing {} zone resources", resources.size());
+
+        for (ZoneResource resource : resources)
+        {
+            log.info("{}", resource);
+        }
+    }
 
     private void addTxtResources(Zone zone)
     {
@@ -59,18 +110,17 @@ public class IntegrationTest
         driver.waitForSync(status);
     }
 
-    private void runDeleteZone(String domain)
-	{
-		loadProperties();
-
-		deleteZone(driver.zoneDetailsForDomain(domain));
-	}
-
 	private void addAliasResources(Zone zone)
 	{
-		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
+        String elbZoneId = testProperties.getProperty("elb-hosted-zone-id");
+        String elbDnsName = testProperties.getProperty("elb-dns-name");
 
-		actions.add(new ZoneUpdateAction.Builder().withData(zone.getName(), RecordType.A).addAliasData(testProperteis.getProperty("elb-hosted-zone-id"), testProperteis.getProperty("elb-dns-name")).buildCreateAction());
+        Defense.notBlank(elbZoneId, "elb-hosted-zone-id");
+        Defense.notBlank(elbDnsName, "elb-dns-name");
+
+        List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
+
+        actions.add(new ZoneUpdateAction.Builder().withData("elb-alias", zone, RecordType.A).addAliasData(elbZoneId, elbDnsName).buildCreateAction());
 
 		final ZoneChangeStatus status = driver.updateZone(zone, "add alias resources", actions);
 
@@ -95,6 +145,10 @@ public class IntegrationTest
 		List<ZoneUpdateAction> actions = new ArrayList<ZoneUpdateAction>();
 
 		actions.add(new ZoneUpdateAction.Builder().withData("www", zone, RecordType.A, "127.0.0.1").buildCreateAction());
+
+        actions.add(new ZoneUpdateAction.Builder().withData("", zone, RecordType.A, "127.0.0.1").buildCreateAction());
+
+        actions.add(new ZoneUpdateAction.Builder().withData("*", zone, RecordType.A, "127.0.0.1").buildCreateAction());
 
 		actions.add(new ZoneUpdateAction.Builder().withData(zone.getName(), RecordType.MX, Arrays.asList("10 mail10.example.com", "20 mail20.example.com", "30 mail30.example.com")).buildCreateAction());
 
@@ -130,27 +184,40 @@ public class IntegrationTest
 			}
 		}
 
-		ZoneChangeStatus status = driver.updateZone(zone, "Delete all resources for zone deletion", deleteActions);
+        List<List<ZoneUpdateAction>> split = ListUtil.split(deleteActions, 100);
 
-		driver.waitForSync(status);
+        for (List<ZoneUpdateAction> actions : split)
+        {
+            ZoneChangeStatus status = driver.updateZone(zone, "Delete all resources for zone deletion", actions);
+            driver.waitForSync(status);
+        }
 
-		status = driver.deleteZone(zone, "Delete integration test zone");
+        ZoneChangeStatus status = driver.deleteZone(zone, "Delete integration test zone");
 
-		driver.waitForSync(status);
-	}
+        driver.waitForSync(status);
+    }
 
-	private void loadProperties()
-	{
-		testProperteis = new Properties();
+	private void setupForTest() throws IOException
+    {
+		testProperties = new Properties();
 
-		try
-		{
-			testProperteis.load(getClass().getResourceAsStream("IntegrationTest.properties"));
-		}
-		catch (IOException e)
-		{
-			throw new RuntimeException(e);
-		}
+        InputStream stream = getClass().getResourceAsStream("IntegrationTest.properties");
+
+        if (stream == null)
+        {
+            throw new FileNotFoundException("You must create a properties file named src/test/resources/com/widen/valet/IntegrationTest.properties with the keys 'aws-access-key' and 'aws-secret-key'");
+        }
+
+        testProperties.load(stream);
+
+
+        String accessKey = testProperties.getProperty("aws-access-key");
+        String secretKey = testProperties.getProperty("aws-secret-key");
+
+        Defense.notBlank(accessKey, "aws-access-key");
+        Defense.notBlank(secretKey, "aws-secret-key");
+
+        driver = new Route53Driver(accessKey, secretKey);
 	}
 
 }

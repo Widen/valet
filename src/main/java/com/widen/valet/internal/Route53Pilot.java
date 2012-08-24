@@ -1,5 +1,7 @@
 package com.widen.valet.internal;
 
+import java.util.Map;
+
 /**
  * The pilot executes "in-flight" requests -- typically HTTP communication to the AWS Route53 endpoint.
  *
@@ -8,7 +10,7 @@ package com.widen.valet.internal;
 public interface Route53Pilot
 {
 
-	String executeResourceRecordSetGet(String zone, String query);
+	String executeResourceRecordSetGet(String zone, Map<String, String> query);
 
 	String executeResourceRecordSetsPost(String zone, String payload);
 

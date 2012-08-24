@@ -1,6 +1,7 @@
 package com.widen.valet.internal;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -40,7 +41,7 @@ public class Route53PilotMock implements Route53Pilot
 		}
 	}
 
-	public String executeResourceRecordSetGet(String zone, String query)
+	public String executeResourceRecordSetGet(String zone, Map<String, String> query)
 	{
 		try
 		{

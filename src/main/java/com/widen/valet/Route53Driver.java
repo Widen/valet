@@ -18,8 +18,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -239,7 +241,7 @@ public class Route53Driver
 
 		boolean readMore = true;
 
-		String query = "";
+		Map<String, String> query = new HashMap<String, String>();
 
 		while (readMore)
 		{
@@ -301,7 +303,7 @@ public class Route53Driver
 				lastName = name;
 			}
 
-			query = String.format("name=%s", lastName);
+            query.put("name", lastName);
 		}
 
 		List<ZoneResource> list = new ArrayList<ZoneResource>();

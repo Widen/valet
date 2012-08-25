@@ -22,16 +22,16 @@ Or browse the repo directly at [https://widen.artifactoryonline.com/widen/libs-w
 
 Change Log:
 
-  0.3.1 - Fix rare URL query parameter encoding issue
+    0.3.1 - Fix rare URL query parameter encoding issue
 
-    0.3 - Remove extraneous system error debug message
+      0.3 - Remove extraneous system error debug message
 
-    0.2 - Weighted Round Robin support
-    	  Alias Resource Record support
-          Delete zone implemented
-          HttpClient instance can be supplied to Route53Driver to support custom proxy server configuration
+      0.2 - Weighted Round Robin support
+      	    Alias Resource Record support
+            Delete zone implemented
+            HttpClient instance can be supplied to Route53Driver to support custom proxy server configuration
 
-    0.1 - Initial version
+      0.1 - Initial version
 
 Contact Uriah Carpenter (uriah at widen.com) with questions.
 

@@ -16,13 +16,15 @@ Available via Maven:
       server: http://widen.artifactoryonline.com/widen/libs-widen-public
        group: widen
     artifact: valet
-     version: 0.3
+     version: 0.3.1
 
 Or browse the repo directly at [https://widen.artifactoryonline.com/widen/libs-widen-public](https://widen.artifactoryonline.com/widen/libs-widen-public/widen/valet/)
 
 Change Log:
 
-	0.3 - Remove extraneous system error debug message
+  0.3.1 - Fix rare URL query parameter encoding issue
+
+    0.3 - Remove extraneous system error debug message
 
     0.2 - Weighted Round Robin support
     	  Alias Resource Record support

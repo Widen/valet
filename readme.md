@@ -1,7 +1,7 @@
 Valet is a simple Java API to interact AWS's [Route53](http://aws.amazon.com/route53/) DNS service.
 
-The [AWS Java SDK](http://aws.amazon.com/releasenotes/Java/4090905529949639) added Route53 in December 2011.
-This simple binding predates the native SDK implementation and includes several tools that may be useful.
+The [AWS Java SDK](http://aws.amazon.com/releasenotes/Java/4090905529949639) added Route53 API support in December 2011.
+This simple binding predates the native SDK implementation and includes several tools that still may be useful.
 
 View [ValetExample](/Widen/valet/blob/master/src/main/java/com/widen/examples/ValetExample.java) for typical usage of Valet API.
 
